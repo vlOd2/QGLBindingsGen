@@ -51,7 +51,7 @@ def handle_func_parser(input_line : str) -> str | None:
     if func == None:
         return None
     
-    line = f"public static delegate* unmanaged<"
+    line = f"[QGLNativeAPI(\"{func.name}\")] public static delegate* unmanaged<"
     for name, type in func.args.items():
         line += f"{typeconverter.convert(type, name)[0]}, "
     line += f"{typeconverter.convert(func.ret_type, None)[0]}> {func.name};"
@@ -145,6 +145,8 @@ def main():
             typeconverter.register_data_structs(data_structs)
 
             indent = 0
+            write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
+            write_indent(output_file, indent, "\n")
             write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
             write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
             write_indent(output_file, indent, "{\n")

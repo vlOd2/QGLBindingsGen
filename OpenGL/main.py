@@ -80,7 +80,7 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
     for _cmd in feature.commands:
         cmd = _commands[_cmd]
         
-        line = f"[GLCommand(\"{cmd.name}\")] public static delegate* unmanaged<"
+        line = f"[QGLNativeAPI(\"{cmd.name}\")] public static delegate* unmanaged<"
         for type in cmd.params.values():
             line += f"{typeconverter.convert(type)}, "
         line += f"{typeconverter.convert(cmd.ret_type)}> {cmd.name};"
