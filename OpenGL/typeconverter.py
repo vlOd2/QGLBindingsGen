@@ -22,28 +22,44 @@ def convert(type : str) -> str:
 
     t = None
     match type:
-        case "int":
-            t = "int"
-        case "uint32_t":
-            t = "uint"
-        case "uint64_t":
-            t = "ulong"
         case "void":
             t = "void"
-        case "char":
-            t = "char"
-        case "float":
-            t = "float"
-        case "double":
-            t = "double"
-        case "unsigned char":
-            t = "byte"
-        case "unsigned short":
-            t = "ushort"
-        case "unsigned int":
+        case "GLenum":
             t = "uint"
-        case "size_t":
-            t = "nuint"
+        case "GLboolean":
+            t = "bool"
+        case "GLbitfield":
+            t = "uint"
+        case "GLvoid":
+            t = "void"
+        case "GLbyte":
+            t = "sbyte"
+        case "GLubyte":
+            t = "byte"
+        case "GLshort":
+            t = "short"
+        case "GLushort":
+            t = "ushort"
+        case "GLint":
+            t = "int"
+        case "GLuint":
+            t = "uint"
+        case "GLclampx":
+            t = "int"
+        case "GLsizei":
+            t = "int"
+        case "GLfloat":
+            t = "float"
+        case "GLclampf":
+            t = "float"
+        case "GLdouble":
+            t = "double"
+        case "GLclampd":
+            t = "double"
+        case "GLchar":
+            t = "char"
+        case "GLcharARB":
+            t = "char"
         case _:
             t = f"__UNKNOWN_{type}"
             if not type in _unknown:

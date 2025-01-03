@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
 from io import TextIOWrapper
 import datetime
 import typeconverter
@@ -29,7 +30,7 @@ import datastructparser
 NAMESPACE = "QuickGLNS"
 HEADER_FILE_NAME = "glfw3.h"
 LICENSE_FILE_NAME = "LICENSE"
-OUTPUT_FILE_NAME = "GLFW.cs"
+OUTPUT_DIR = "generated/"
 STRUCT_FIXED_ARRAYS = True
 
 def handle_const_parser(input_line : str) -> str | None:
@@ -121,7 +122,8 @@ def generate_class(file : TextIOWrapper, output_file : TextIOWrapper, indent : i
     write_indent(output_file, indent, "}\n")
 
 def main():
-    with open(OUTPUT_FILE_NAME, "w") as output_file:
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(f"{OUTPUT_DIR}GLFW.cs", "w") as output_file:
         with open(LICENSE_FILE_NAME, "r") as file:
             for line in iter(file.readline, ""):
                 output_file.write(f"// {line.strip()}\n")

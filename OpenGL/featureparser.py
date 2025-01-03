@@ -22,14 +22,14 @@ def parse(root : xml.Element) -> list[GLFeature]:
             continue
 
         enums = []
-        for enum_element in element.findall("./enum"):
+        for enum_element in element.findall("./require/enum"):
             name = enum_element.get("name")
             if name == None:
                 continue
             enums.append(name)
 
         commands = []
-        for cmd_element in element.findall("./command"):
+        for cmd_element in element.findall("./require/command"):
             name = cmd_element.get("name")
             if name == None:
                 continue

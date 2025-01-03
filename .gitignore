@@ -172,5 +172,5 @@ cython_debug/
 
 /glfw3.h
 /gl.xml
-/GLFW.cs
-/GL.cs
+/generated/
+*.cs
