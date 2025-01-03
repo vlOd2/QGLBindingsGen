@@ -123,15 +123,20 @@ def main():
     global _commands
 
     root : xml.Element = xml.parse(REGISTRY_FILE).getroot()
+    print("Parsing enums")
     _enums = enumparser.parse(root)
+    print("Parsing commands")
     _commands = commandparser.parse(root)
+    print("Parsing features")
     features = featureparser.parse_features(root)
+    print("Parsing extensions")
     extensions = featureparser.parse_extensions(root)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     for feature in features:
         if not feature.name in TARGET_FEATURES:
             continue
+        print(f"Generating bindings for feature: {feature.name}")
         class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
             generate(feature, class_name, output_file)
@@ -139,10 +144,12 @@ def main():
     for ext in extensions:
         if not ext.name in TARGET_EXTENSIONS:
             continue
+        print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
             generate(ext, class_name, output_file)
 
+    print("Done")
 
 if __name__ == "__main__":
     main()
