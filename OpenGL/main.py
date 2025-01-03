@@ -51,7 +51,9 @@ TARGET_FEATURES.extend([
 
 # Target extensions to generate bindings for
 # No extension is included by default
-TARGET_EXTENSIONS = []
+TARGET_EXTENSIONS = [
+    "GL_ARB_occlusion_query"
+]
 
 NAMESPACE = "QuickGLNS"
 REGISTRY_FILE = "gl.xml"
@@ -128,9 +130,9 @@ def main():
     print("Parsing commands")
     _commands = commandparser.parse(root)
     print("Parsing features")
-    features = featureparser.parse_features(root)
+    features = featureparser.parse(root, "./feature")
     print("Parsing extensions")
-    extensions = featureparser.parse_extensions(root)
+    extensions = featureparser.parse(root, "./extensions/extension")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     for feature in features:

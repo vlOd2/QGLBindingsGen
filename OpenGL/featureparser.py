@@ -32,10 +32,10 @@ class GLFeature:
         self.enums = enums
         self.commands = commands
 
-def parse_features(root : xml.Element) -> list[GLFeature]:
+def parse(root : xml.Element, path : str) -> list[GLFeature]:
     features = []
 
-    for element in root.findall("./feature"):
+    for element in root.findall(path):
         feature_name = element.get("name")
         if feature_name == None:
             continue
@@ -43,43 +43,17 @@ def parse_features(root : xml.Element) -> list[GLFeature]:
         enums = []
         for enum_element in element.findall("./require/enum"):
             name = enum_element.get("name")
-            if name == None:
+            if name == None or name in enums:
                 continue
             enums.append(name)
 
         commands = []
         for cmd_element in element.findall("./require/command"):
             name = cmd_element.get("name")
-            if name == None:
+            if name == None or name in commands:
                 continue
             commands.append(name)
 
         features.append(GLFeature(feature_name, enums, commands))
 
     return features
-
-def parse_extensions(root : xml.Element) -> list[GLFeature]:
-    extensions = []
-
-    for element in root.findall("./extensions/extension"):
-        ext_name = element.get("name")
-        if ext_name == None:
-            continue
-
-        enums = []
-        for enum_element in element.findall("./require/enum"):
-            name = enum_element.get("name")
-            if name == None:
-                continue
-            enums.append(name)
-
-        commands = []
-        for cmd_element in element.findall("./require/command"):
-            name = cmd_element.get("name")
-            if name == None:
-                continue
-            commands.append(name)
-
-        extensions.append(GLFeature(ext_name, enums, commands))
-
-    return extensions
