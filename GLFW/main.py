@@ -19,6 +19,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import sys
+from os import path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+from common_const import *
+
 import os
 from io import TextIOWrapper
 import datetime
@@ -27,10 +32,7 @@ import funcparser
 import constparser
 import datastructparser
 
-NAMESPACE = "QuickGLNS"
 HEADER_FILE_NAME = "glfw3.h"
-LICENSE_FILE_NAME = "LICENSE"
-OUTPUT_DIR = "generated/"
 STRUCT_FIXED_ARRAYS = True
 
 def handle_const_parser(input_line : str) -> str | None:

@@ -19,6 +19,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import sys
+from os import path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+from common_const import *
+
 import os
 from io import TextIOWrapper
 import xml.etree.ElementTree as xml
@@ -55,10 +60,7 @@ TARGET_EXTENSIONS = [
     "GL_ARB_occlusion_query"
 ]
 
-NAMESPACE = "QuickGLNS"
 REGISTRY_FILE = "gl.xml"
-LICENSE_FILE_NAME = "LICENSE"
-OUTPUT_DIR = "generated/"
 
 _enums : dict[str, int]
 _commands : dict[str, GLCommand]
