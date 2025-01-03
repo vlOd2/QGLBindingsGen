@@ -30,14 +30,36 @@ import typeconverter
 from commandparser import GLCommand
 from featureparser import GLFeature
 
+# Target features to generate bindings for
+# Only features that generate fully are included by default
+# Normal OpenGL
+TARGET_FEATURES = [
+    "GL_VERSION_1_0", "GL_VERSION_1_1", 
+    "GL_VERSION_1_2", "GL_VERSION_1_3", 
+    "GL_VERSION_1_4", "GL_VERSION_1_5",
+    "GL_VERSION_2_0", "GL_VERSION_2_1", 
+    "GL_VERSION_3_0", "GL_VERSION_3_1", 
+    "GL_VERSION_3_2", "GL_VERSION_3_3",
+    "GL_VERSION_4_0", "GL_VERSION_4_1",
+    "GL_VERSION_4_2"
+]
+# OpenGL ES
+TARGET_FEATURES.extend([ 
+    "GL_VERSION_ES_CM_1_0", "GL_ES_VERSION_2_0", 
+    "GL_ES_VERSION_3_0", "GL_ES_VERSION_3_1"
+])
+
+# Target extensions to generate bindings for
+# No extension is included by default
+TARGET_EXTENSIONS = []
+
 NAMESPACE = "QuickGLNS"
 REGISTRY_FILE = "gl.xml"
 LICENSE_FILE_NAME = "LICENSE"
-TARGET_FEATURES = [ "GL_VERSION_1_0", "GL_VERSION_1_1" ]
 OUTPUT_DIR = "generated/"
 
-enums : dict[str, int]
-commands : dict[str, GLCommand]
+_enums : dict[str, int]
+_commands : dict[str, GLCommand]
 
 def get_indent(lvl : int) -> str:
     return "".ljust(lvl * 4, " ")
@@ -47,14 +69,14 @@ def write_indent(file : TextIOWrapper, lvl : int, str : str) -> None:
 
 def generate_enums(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> None:
     for enum in feature.enums:
-        value = enums[enum]
+        value = _enums[enum]
         type = typeconverter.get_for_const(value)
         hex_value = hex(value).upper().replace('X', 'x', 1)
         write_indent(output_file, indent, f"public const {type} {enum} = {hex_value};\n")
 
 def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> None:
     for _cmd in feature.commands:
-        cmd = commands[_cmd]
+        cmd = _commands[_cmd]
         
         line = f"public static delegate* unmanaged<"
         for type in cmd.params.values():
@@ -83,33 +105,43 @@ def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWr
     indent -= 1
     write_indent(output_file, indent, "}\n")
 
+def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper):
+    with open(LICENSE_FILE_NAME, "r") as file:
+        for line in iter(file.readline, ""):
+            output_file.write(f"// {line.strip()}\n")
+        output_file.write("\n")
+
+    indent = 0
+    write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
+    write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
+    write_indent(output_file, indent, "{\n")
+    generate_class(feature, class_name, output_file, indent + 1)
+    write_indent(output_file, indent, "}\n")
+
 def main():
-    global enums
-    global commands
+    global _enums
+    global _commands
 
     root : xml.Element = xml.parse(REGISTRY_FILE).getroot()
-    enums = enumparser.parse(root)
-    commands = commandparser.parse(root)
-    features = featureparser.parse(root)
+    _enums = enumparser.parse(root)
+    _commands = commandparser.parse(root)
+    features = featureparser.parse_features(root)
+    extensions = featureparser.parse_extensions(root)
 
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     for feature in features:
         if not feature.name in TARGET_FEATURES:
             continue
-        class_name = feature.name.replace("GL_VERSION_", "GL").replace("_", "")
-
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
-            with open(LICENSE_FILE_NAME, "r") as file:
-                for line in iter(file.readline, ""):
-                    output_file.write(f"// {line.strip()}\n")
-                output_file.write("\n")
-
-            indent = 0
-            write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
-            write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
-            write_indent(output_file, indent, "{\n")
-            generate_class(feature, class_name, output_file, indent + 1)
-            write_indent(output_file, indent, "}\n")
+            generate(feature, class_name, output_file)
+    
+    for ext in extensions:
+        if not ext.name in TARGET_EXTENSIONS:
+            continue
+        class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
+        with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
+            generate(ext, class_name, output_file)
 
 
 if __name__ == "__main__":
