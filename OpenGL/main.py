@@ -56,9 +56,7 @@ TARGET_FEATURES.extend([
 
 # Target extensions to generate bindings for
 # No extension is included by default
-TARGET_EXTENSIONS = [
-    "GL_ARB_occlusion_query"
-]
+TARGET_EXTENSIONS = []
 
 REGISTRY_FILE = "gl.xml"
 
@@ -82,7 +80,7 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
     for _cmd in feature.commands:
         cmd = _commands[_cmd]
         
-        line = f"public static delegate* unmanaged<"
+        line = f"[GLCommand(\"{cmd.name}\")] public static delegate* unmanaged<"
         for type in cmd.params.values():
             line += f"{typeconverter.convert(type)}, "
         line += f"{typeconverter.convert(cmd.ret_type)}> {cmd.name};"
@@ -94,6 +92,7 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
         write_indent(output_file, indent, f"{line}\n")
 
 def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int) -> None:
+    write_indent(output_file, indent, "[GLFeature]\n")
     write_indent(output_file, indent, f"public static unsafe class {class_name}\n")
     write_indent(output_file, indent, "{\n")
     indent += 1
@@ -116,6 +115,8 @@ def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper)
         output_file.write("\n")
 
     indent = 0
+    write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
+    write_indent(output_file, indent, "\n")
     write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
     write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
     write_indent(output_file, indent, "{\n")
