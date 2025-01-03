@@ -26,13 +26,13 @@ _PARSE_FUNC = r"GLFWAPI ([a-zA-Z0-9_ *]+) (glfw[a-zA-Z0-9_]+)\((.*)\);"
 _parse_func_pattern = re.compile(_PARSE_FUNC)
 
 class GLFWFunc:
-    ret_val : str
+    ret_type : str
     name : str
     args : dict[str, str]
 
-    def __init__(self, ret_val : str, func_name : str, args_raw : str | None):
-        self.ret_val = ret_val
-        self.name = func_name
+    def __init__(self, ret_type : str, name : str, args_raw : str | None):
+        self.ret_type = ret_type
+        self.name = name
         self.args = {}
         if not args_raw:
             return

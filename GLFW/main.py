@@ -51,7 +51,7 @@ def handle_func_parser(input_line : str) -> str | None:
     line = f"public static delegate* unmanaged<"
     for name, type in func.args.items():
         line += f"{typeconverter.convert(type, name)[0]}, "
-    line += f"{typeconverter.convert(func.ret_val, None)[0]}> {func.name};"
+    line += f"{typeconverter.convert(func.ret_type, None)[0]}> {func.name};"
 
     if "__UNKNOWN_" in line:
         print(f"Skipping function (contains unknown types): {func.name}")

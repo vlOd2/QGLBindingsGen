@@ -47,7 +47,7 @@ def _convert_callback(callback : GLFWFunc) -> str:
     line = f"delegate* unmanaged<"
     for name, type in callback.args.items():
         line += f"{convert(type, name)[0]}, "
-    line += f"{convert(callback.ret_val, None)[0]}>"
+    line += f"{convert(callback.ret_type, None)[0]}>"
     return line
 
 def convert(type : str, name : str | None, convert_fixed_array : bool = True) -> tuple[str, str | None, int]:
