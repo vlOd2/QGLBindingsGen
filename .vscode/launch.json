@@ -11,6 +11,14 @@
             "program": "${workspaceFolder}/GLFW/main.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "OpenGL Bindings Generator",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/OpenGL/main.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
         }
     ]
 }

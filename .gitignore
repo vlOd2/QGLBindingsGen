@@ -170,5 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-/GLFW.cs
 /glfw3.h
+/gl.xml
+/GLFW.cs
+/GL.cs
