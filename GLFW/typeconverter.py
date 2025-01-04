@@ -31,7 +31,7 @@ _callback_defs_pattern = re.compile(_CALLBACK_DEFS)
 _unknown : list[str] = []
 _structs : list[str] = []
 _data_structs : list[str] = []
-_callbacks : list[GLFWFunc] = []
+callbacks : list[GLFWFunc] = []
 
 def get_for_const(val : int) -> str:
     if val > 0x7FFFFFFF_FFFFFFFF:
@@ -42,13 +42,6 @@ def get_for_const(val : int) -> str:
         return "uint"
     else:
         return "int"
-
-def _convert_callback(callback : GLFWFunc) -> str:
-    line = f"delegate* unmanaged<"
-    for name, type in callback.args.items():
-        line += f"{convert(type, name)[0]}, "
-    line += f"{convert(callback.ret_type, None)[0]}>"
-    return line
 
 def convert(type : str, name : str | None, convert_fixed_array : bool = True) -> tuple[str, str | None, int]:
     type = type.strip()
@@ -80,9 +73,9 @@ def convert(type : str, name : str | None, convert_fixed_array : bool = True) ->
     if type in _data_structs:
         t = type
 
-    for callback in _callbacks:
+    for callback in callbacks:
         if type == callback.name:
-            t = _convert_callback(callback)
+            t = type
             break
 
     if t == None: 
@@ -140,7 +133,7 @@ def _parse_callback_def(line : str) -> None:
     args_raw = groups[2].strip()
 
     callback = GLFWFunc(ret_val, callback_name, args_raw)
-    _callbacks.append(callback)
+    callbacks.append(callback)
 
 def parse_def(line : str) -> None:
     if _parse_struct_def(line):

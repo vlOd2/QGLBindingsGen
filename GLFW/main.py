@@ -68,7 +68,20 @@ def get_indent(lvl : int) -> str:
 def write_indent(file : TextIOWrapper, lvl : int, str : str) -> None:
     file.write(f"{get_indent(lvl)}{str}")
 
-def generate_struct(struct : datastructparser.GLFWStruct, output_file : TextIOWrapper, indent : int, ) -> None:
+def generate_callback(callback : funcparser.GLFWFunc, output_file : TextIOWrapper, indent : int) -> None:
+    line = f"public delegate {callback.ret_type} {callback.name}("
+
+    end_index = len(callback.args) - 1
+    for i, (name, type) in enumerate(callback.args.items()):
+        converted = typeconverter.convert(type, name)
+        line += f"{converted[0]} {converted[1]}"
+        if i < end_index:
+            line += ", "
+
+    line += ");";
+    write_indent(output_file, indent, f"{line}\n")
+
+def generate_struct(struct : datastructparser.GLFWStruct, output_file : TextIOWrapper, indent : int) -> None:
     write_indent(output_file, indent, f"public unsafe struct {struct.typedef}\n")
     write_indent(output_file, indent, "{\n")
 
@@ -118,7 +131,10 @@ def generate_class(file : TextIOWrapper, output_file : TextIOWrapper, indent : i
             write_indent(output_file, indent, "#region Functions\n")
             done_const = True
         write_indent(output_file, indent, f"{out_line}\n")
-        
+        write_indent(output_file, indent, "\n")
+    
+    # Janky way to remove the newline from the last function
+    output_file.seek(output_file.tell() - len(get_indent(indent)) - 1, 0)
     write_indent(output_file, indent, "#endregion\n")
     indent -= 1
     write_indent(output_file, indent, "}\n")
@@ -147,14 +163,24 @@ def main():
             indent = 0
             write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
             write_indent(output_file, indent, "\n")
+
+            print("Generating namespace")
             write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
             write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
             write_indent(output_file, indent, "{\n")
             
             indent += 1
+            print("Generating callbacks")
+            for callback in typeconverter.callbacks:
+                generate_callback(callback, output_file, indent)
+                write_indent(output_file, indent, "\n")
+
+            print("Generating data structs")
             for struct in data_structs:
                 generate_struct(struct, output_file, indent)
                 write_indent(output_file, indent, "\n")
+
+            print("Generating class")
             generate_class(file, output_file, indent)
             indent -= 1
 
