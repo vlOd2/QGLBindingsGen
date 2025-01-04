@@ -23,6 +23,18 @@ import re
 from funcparser import GLFWFunc
 from datastructparser import GLFWStruct
 
+# I know a lot of these can't be in the header file anyway
+# But I am fucking too lazy to filter them out, womp, womp
+_RESERVED_NAMES = [
+    "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", 
+    "const", "continue", "decimal", "default", "delegate", "do", "double", "else", "enum", 
+    "event", "explicit", "extern", "false", "finally", "fixed", "float", "for", "foreach", 
+    "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock", "long", 
+    "namespace", "new", "null", "object", "operator", "out", "override", "params", "private", 
+    "protected", "public", "readonly", "ref", "return", "sbyte", "sealed", "short", "sizeof", 
+    "stackalloc", "static", "string", "struct", "switch", "this", "throw", "true", "try", "typeof", 
+    "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while"
+]
 _STRUCT_DEFS = r"typedef struct (GLFW[a-zA-Z0-9_*]+) (GLFW[a-zA-Z0-9_*]+);"
 _CALLBACK_DEFS = r"typedef ([a-zA-Z0-9_ *]+) \(\*\s*(GLFW[a-zA-Z0-9_]+)\)\((.*)\);"
 _struct_defs_pattern = re.compile(_STRUCT_DEFS)
@@ -42,6 +54,12 @@ def get_for_const(val : int) -> str:
         return "uint"
     else:
         return "int"
+
+def _sanitize_name(name : str) -> str:
+    name = name.strip()
+    if name in _RESERVED_NAMES:
+        return f"@{name}"
+    return name
 
 def convert(type : str, name : str | None, convert_fixed_array : bool = True) -> tuple[str, str | None, int]:
     type = type.strip()
@@ -64,6 +82,7 @@ def convert(type : str, name : str | None, convert_fixed_array : bool = True) ->
                     ptr_count += 1
                 array_size = int(match.group(1))
                 name = re.sub(r"\[\d+\]", "", name)
+        name = _sanitize_name(name)
 
     t = None
     if type in _structs:

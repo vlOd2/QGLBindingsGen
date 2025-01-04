@@ -69,7 +69,7 @@ def write_indent(file : TextIOWrapper, lvl : int, str : str) -> None:
     file.write(f"{get_indent(lvl)}{str}")
 
 def generate_callback(callback : funcparser.GLFWFunc, output_file : TextIOWrapper, indent : int) -> None:
-    line = f"public delegate {callback.ret_type} {callback.name}("
+    line = f"public unsafe delegate {callback.ret_type} {callback.name}("
 
     end_index = len(callback.args) - 1
     for i, (name, type) in enumerate(callback.args.items()):
