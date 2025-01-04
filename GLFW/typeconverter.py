@@ -61,7 +61,7 @@ def _sanitize_name(name : str) -> str:
         return f"@{name}"
     return name
 
-def convert(type : str, name : str | None, convert_fixed_array : bool = True) -> tuple[str, str | None, int]:
+def convert(type : str, name : str | None, convert_fixed_array : bool = True, convert_callbacks : bool = False) -> tuple[str, str | None, int]:
     type = type.strip()
     type = type.removeprefix("const ")
     ptr_count = 0
@@ -95,6 +95,8 @@ def convert(type : str, name : str | None, convert_fixed_array : bool = True) ->
     for callback in callbacks:
         if type == callback.name:
             t = type
+            if convert_callbacks:
+                t = "nint"
             break
 
     if t == None: 

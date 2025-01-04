@@ -87,7 +87,7 @@ def generate_struct(struct : datastructparser.GLFWStruct, output_file : TextIOWr
 
     indent += 1
     for name, type in struct.fields.items():
-        converted = typeconverter.convert(type, name, not STRUCT_FIXED_ARRAYS)
+        converted = typeconverter.convert(type, name, not STRUCT_FIXED_ARRAYS, True)
         t = converted[0]
         n = converted[1] or "__INVALID"
         mod = "public"
