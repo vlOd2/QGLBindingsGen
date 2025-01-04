@@ -54,7 +54,7 @@ def handle_func_parser(input_line : str) -> str | None:
     line = f"[QGLNativeAPI(\"{func.name}\")] public static delegate* unmanaged<"
     for name, type in func.args.items():
         line += f"{typeconverter.convert(type, name)[0]}, "
-    line += f"{typeconverter.convert(func.ret_type, None)[0]}> {func.name};"
+    line += f"{typeconverter.convert(func.ret_type, None, convert_callbacks=True)[0]}> {func.name};"
 
     if "__UNKNOWN_" in line:
         print(f"Skipping function (contains unknown types): {func.name}")
@@ -68,6 +68,10 @@ def get_indent(lvl : int) -> str:
 def write_indent(file : TextIOWrapper, lvl : int, str : str) -> None:
     file.write(f"{get_indent(lvl)}{str}")
 
+# Retarded jank shit, but it's the easiest thing I could do
+def undo_last_line(output_file : TextIOWrapper, indent : int) -> None:
+    output_file.seek(output_file.tell() - len(get_indent(indent)) - 1, 0)
+
 def generate_callback(callback : funcparser.GLFWFunc, output_file : TextIOWrapper, indent : int) -> None:
     line = f"public unsafe delegate {callback.ret_type} {callback.name}("
 
@@ -79,6 +83,7 @@ def generate_callback(callback : funcparser.GLFWFunc, output_file : TextIOWrappe
             line += ", "
 
     line += ");";
+    write_indent(output_file, indent, "[UnmanagedFunctionPointer(CallingConvention.Winapi)]\n")
     write_indent(output_file, indent, f"{line}\n")
 
 def generate_struct(struct : datastructparser.GLFWStruct, output_file : TextIOWrapper, indent : int) -> None:
@@ -133,8 +138,7 @@ def generate_class(file : TextIOWrapper, output_file : TextIOWrapper, indent : i
         write_indent(output_file, indent, f"{out_line}\n")
         write_indent(output_file, indent, "\n")
     
-    # Janky way to remove the newline from the last function
-    output_file.seek(output_file.tell() - len(get_indent(indent)) - 1, 0)
+    undo_last_line(output_file, indent)
     write_indent(output_file, indent, "#endregion\n")
     indent -= 1
     write_indent(output_file, indent, "}\n")
@@ -161,6 +165,7 @@ def main():
             typeconverter.register_data_structs(data_structs)
 
             indent = 0
+            write_indent(output_file, indent, "using System.Runtime.InteropServices;\n")
             write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
             write_indent(output_file, indent, "\n")
 
@@ -171,9 +176,13 @@ def main():
             
             indent += 1
             print("Generating callbacks")
+            write_indent(output_file, indent, "#region Callbacks\n")
             for callback in typeconverter.callbacks:
                 generate_callback(callback, output_file, indent)
                 write_indent(output_file, indent, "\n")
+            undo_last_line(output_file, indent)
+            write_indent(output_file, indent, "#endregion\n")
+            write_indent(output_file, indent, "\n")
 
             print("Generating data structs")
             for struct in data_structs:
