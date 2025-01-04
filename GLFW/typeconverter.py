@@ -96,13 +96,13 @@ def convert(type : str, name : str | None, convert_fixed_array : bool = True) ->
             case "void":
                 t = "void"
             case "char":
-                t = "char"
+                t = "byte"
+            case "unsigned char":
+                t = "byte"
             case "float":
                 t = "float"
             case "double":
                 t = "double"
-            case "unsigned char":
-                t = "byte"
             case "unsigned short":
                 t = "ushort"
             case "unsigned int":

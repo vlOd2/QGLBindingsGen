@@ -82,9 +82,9 @@ def convert(type : str) -> str:
         case "GLclampd":
             t = "double"
         case "GLchar":
-            t = "char"
+            t = "byte"
         case "GLcharARB":
-            t = "char"
+            t = "byte"
         case "GLhalf":
             t = "ushort"
         case "GLhalfARB":
