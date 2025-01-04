@@ -21,7 +21,7 @@
 # SOFTWARE.
 import re
 
-_PARSE_DEFS = r"#define (GLFW_[a-zA-Z0-9_]+)\s+((?:0x[0-9]*)|(?:[0-9]+))"
+_PARSE_DEFS = r"#define (GLFW_[a-zA-Z0-9_]+)\s+((?:0x[0-9]*)|(?:[\-0-9]+))"
 _parse_defs_pattern = re.compile(_PARSE_DEFS)
 
 def parse(line : str) -> tuple[str, str] | None:
