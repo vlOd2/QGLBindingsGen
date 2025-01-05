@@ -49,10 +49,12 @@ TARGET_FEATURES = [
     "GL_VERSION_4_2"
 ]
 # OpenGL ES
-TARGET_FEATURES.extend([ 
-    "GL_VERSION_ES_CM_1_0", "GL_ES_VERSION_2_0", 
-    "GL_ES_VERSION_3_0", "GL_ES_VERSION_3_1"
-])
+# This is disabled by default as QuickGL 
+# doesn't have the support for context creation with it
+# TARGET_FEATURES.extend([ 
+#     "GL_VERSION_ES_CM_1_0", "GL_ES_VERSION_2_0", 
+#     "GL_ES_VERSION_3_0", "GL_ES_VERSION_3_1"
+# ])
 
 # Target extensions to generate bindings for
 # No extension is included by default
