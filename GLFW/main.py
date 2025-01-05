@@ -40,11 +40,17 @@ def handle_const_parser(input_line : str) -> str | None:
     if const == None:
         return None
     
-    const_val = int(const[1], 0)
-    const_type = typeconverter.get_for_const(const_val)
-    line = f"public const {const_type} {const[0]} = {hex(const_val).upper().replace('X', 'x', 1)};"
-    
-    return line
+    const_val : str
+    const_type : str
+    try:
+        value = int(const[1], 0)
+        const_type = typeconverter.get_for_const(value)
+        const_val = hex(value).upper().replace('X', 'x', 1)
+    except:
+        const_val = const[1].strip()
+        const_type = "uint" # I am hoping this is large enough for most
+
+    return f"public const {const_type} {const[0]} = {const_val};"
 
 def handle_func_parser(input_line : str) -> str | None:
     func = funcparser.parse(input_line)
