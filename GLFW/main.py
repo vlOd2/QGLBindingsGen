@@ -31,6 +31,7 @@ import typeconverter
 import funcparser
 import constparser
 import datastructparser
+import docsparser
 
 HEADER_FILE_NAME = "glfw3.h"
 STRUCT_FIXED_ARRAYS = True
@@ -150,55 +151,73 @@ def generate_class(file : TextIOWrapper, output_file : TextIOWrapper, indent : i
     write_indent(output_file, indent, "}\n")
 
 def main():
+    # Ensure output dir exists
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+
     with open(f"{OUTPUT_DIR}GLFW.cs", "w") as output_file:
+        # License header
         with open(LICENSE_FILE_NAME, "r") as file:
             for line in iter(file.readline, ""):
                 output_file.write(f"// {line.strip()}\n")
             output_file.write("\n")
 
         with open(HEADER_FILE_NAME, "r") as file:
+            # Parse type defs
             print("Parsing type definitions")
             for line in iter(file.readline, ""):
                 typeconverter.parse_def(line.strip())
             file.seek(0, 0)
 
+            # Parse data structs
             print("Parsing data structs")
             _lines = file.readlines()
-            data_structs = datastructparser.parse("\n".join([s.strip() for s in _lines]))
-            _lines = None
-            file.seek(0, 0)
+            _lines = "\n".join([s.strip() for s in _lines])
+            data_structs = datastructparser.parse(_lines)
             typeconverter.register_data_structs(data_structs)
 
+            # Parse documentation
+            print("Parsing documentation")
+            docsparser.parse(_lines)
+            _lines = None
+            file.seek(0, 0)
+
+            # Usings
             indent = 0
             write_indent(output_file, indent, "using System.Runtime.InteropServices;\n")
             write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
             write_indent(output_file, indent, "\n")
 
+            # Begin namespace
             print("Generating namespace")
             write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
             write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
             write_indent(output_file, indent, "{\n")
             
+            # Callbacks
             indent += 1
             print("Generating callbacks")
             write_indent(output_file, indent, "#region Callbacks\n")
+
             for callback in typeconverter.callbacks:
                 generate_callback(callback, output_file, indent)
                 write_indent(output_file, indent, "\n")
+
             undo_last_line(output_file, indent)
             write_indent(output_file, indent, "#endregion\n")
             write_indent(output_file, indent, "\n")
 
+            # Data structs
             print("Generating data structs")
             for struct in data_structs:
                 generate_struct(struct, output_file, indent)
                 write_indent(output_file, indent, "\n")
 
+            # Class, constants and functions
             print("Generating class")
             generate_class(file, output_file, indent)
             indent -= 1
 
+            # End namespace
             write_indent(output_file, indent, "}\n")
 
         print("Done")
