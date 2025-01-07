@@ -53,21 +53,52 @@ def handle_const_parser(input_line : str) -> str | None:
 
     return f"public const {const_type} {const[0]} = {const_val};"
 
-def handle_func_parser(input_line : str) -> str | None:
+def _generate_wrapper_func(func : funcparser.GLFWFunc, func_ret_type : str, func_args : dict[str, str]) -> str:
+    output = ""
+    call_args = ""
+    
+    # Add doxygen docs (if any)
+    func_doc = docsparser.func_docs.get(func.name)
+    if func_doc != None:
+        output += f"{func_doc}\n"
+    
+    output += f"public static {func_ret_type} {func.name}("
+    for i, (name, type) in enumerate(func_args.items()):
+        output += f"{type} {name}"
+        call_args += name
+        if i < len(func_args) - 1:
+            output += ", "
+            call_args += ", "
+    output += f") => _{func.name}({call_args});"
+
+    return output
+
+def handle_func_parser(input_line : str) -> list[str] | None:
     func = funcparser.parse(input_line)
+
     if func == None:
         return None
-    
-    line = f"[QGLNativeAPI(\"{func.name}\")] public static delegate* unmanaged<"
-    for name, type in func.args.items():
-        line += f"{typeconverter.convert(type, name)[0]}, "
-    line += f"{typeconverter.convert(func.ret_type, None, convert_callbacks=True)[0]}> {func.name};"
+    func_args : dict[str, str] = {}
+    func_ret_type = typeconverter.convert(func.ret_type, None, convert_callbacks=True)[0]
 
-    if "__UNKNOWN_" in line:
+    for name, type in func.args.items():
+        converted = typeconverter.convert(type, name)
+        if converted[1] == None:
+            print(f"Skipping function (invalid arg name): {func.name}")
+            return None
+        func_args[converted[1]] = converted[0]
+
+    definition = f"{_generate_wrapper_func(func, func_ret_type, func_args)}\n"
+    definition += f"[QGLNativeAPI(\"{func.name}\")] internal static delegate* unmanaged<"
+    for name, type in func_args.items():
+        definition += f"{type}, "
+    definition += f"{func_ret_type}> _{func.name} = null;"
+
+    if "__UNKNOWN_" in definition:
         print(f"Skipping function (contains unknown types): {func.name}")
         return None
 
-    return line
+    return definition.splitlines()
 
 def get_indent(lvl : int) -> str:
     return "".ljust(lvl * 4, " ")
@@ -133,8 +164,8 @@ def generate_class(file : TextIOWrapper, output_file : TextIOWrapper, indent : i
             continue
         
         # Functions
-        out_line = handle_func_parser(line)
-        if out_line == None:
+        out_lines = handle_func_parser(line)
+        if out_lines == None:
             continue
         if not done_const:
             print("Generating methods")
@@ -142,7 +173,8 @@ def generate_class(file : TextIOWrapper, output_file : TextIOWrapper, indent : i
             write_indent(output_file, indent, "\n")
             write_indent(output_file, indent, "#region Functions\n")
             done_const = True
-        write_indent(output_file, indent, f"{out_line}\n")
+        for out_line in out_lines:
+            write_indent(output_file, indent, f"{out_line}\n")
         write_indent(output_file, indent, "\n")
     
     undo_last_line(output_file, indent)

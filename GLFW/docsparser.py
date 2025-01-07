@@ -30,12 +30,14 @@ def parse(header_content : str) -> None:
 
         brief_section = brief_match.group(1)
         doc = "/// <summary>\n"
-        doc += "\n".join([f"/// {s.strip()}" for s in brief_section.splitlines()])
+        doc += "\n".join([f"/// {s.strip()}<br/>" for s in brief_section.splitlines()])
         doc += "\n/// </summary>\n"
 
         for param_match in _param_section_pattern.finditer(comment):
             param_groups = param_match.groups()
-            doc += f"/// <param name=\"{param_groups[0].strip()}\">{param_groups[1].strip()}</param>\n"
+            param_name = param_groups[0].strip()
+            param_display = param_groups[1].strip().replace("\n", "<br/>")
+            doc += f"/// <param name=\"{param_name}\">{param_display}</param>\n"
 
         func_docs[groups[1].strip()] = doc.strip()
         
