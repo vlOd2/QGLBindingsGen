@@ -71,6 +71,10 @@ def get_indent(lvl : int) -> str:
 def write_indent(file : TextIOWrapper, lvl : int, str : str) -> None:
     file.write(f"{get_indent(lvl)}{str}")
 
+# Retarded jank shit, but it's the easiest thing I could do
+def undo_last_line(file : TextIOWrapper, indent : int) -> None:
+    file.seek(file.tell() - len(get_indent(indent)) - 1, 0)
+
 def generate_enums(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> None:
     for enum in feature.enums:
         value = _enums[enum]
@@ -78,20 +82,43 @@ def generate_enums(feature : GLFeature, output_file : TextIOWrapper, indent : in
         hex_value = hex(value).upper().replace('X', 'x', 1)
         write_indent(output_file, indent, f"public const {type} {enum} = {hex_value};\n")
 
+def _generate_cmd_wrapper(command : GLCommand, cmd_ret_type : str, cmd_params : dict[str, str]) -> str:
+    output = ""
+    call_args = ""
+ 
+    output += f"public static {cmd_ret_type} {command.name}("
+    for i, (name, type) in enumerate(cmd_params.items()):
+        output += f"{type} {name}"
+        call_args += name
+        if i < len(cmd_params) - 1:
+            output += ", "
+            call_args += ", "
+    output += f") => _{command.name}({call_args});"
+
+    return output
+
 def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> None:
     for _cmd in feature.commands:
         cmd = _commands[_cmd]
-        
-        line = f"[QGLNativeAPI(\"{cmd.name}\")] public static delegate* unmanaged<"
-        for type in cmd.params.values():
-            line += f"{typeconverter.convert(type)}, "
-        line += f"{typeconverter.convert(cmd.ret_type)}> {cmd.name};"
 
-        if "__UNKNOWN_" in line:
-            print(f"Skipping function (contains unknown types): {cmd.name}")
+        cmd_params : dict[str, str] = {}
+        cmd_ret_type = typeconverter.convert(cmd.ret_type)
+        for name, type in cmd.params.items():
+            cmd_params[name] = typeconverter.convert(type)
+
+        lines = f"{_generate_cmd_wrapper(cmd, cmd_ret_type, cmd_params)}\n"
+        lines += f"[QGLNativeAPI(\"{cmd.name}\")] internal static delegate* unmanaged<"
+        for type in cmd_params.values():
+            lines += f"{type}, "
+        lines += f"{cmd_ret_type}> _{cmd.name} = null;"
+
+        if "__UNKNOWN_" in lines:
+            print(f"Skipping command (contains unknown types): {cmd.name}")
             continue
 
-        write_indent(output_file, indent, f"{line}\n")
+        for line in lines.splitlines():
+            write_indent(output_file, indent, f"{line}\n")
+        write_indent(output_file, indent, "\n")
 
 def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int) -> None:
     write_indent(output_file, indent, "[GLFeature]\n")
@@ -105,6 +132,7 @@ def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWr
     write_indent(output_file, indent, "\n")
     write_indent(output_file, indent, "#region Commands\n")
     generate_commands(feature, output_file, indent)
+    undo_last_line(output_file, indent)
     write_indent(output_file, indent, "#endregion\n")
 
     indent -= 1

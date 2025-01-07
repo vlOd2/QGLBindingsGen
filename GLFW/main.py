@@ -107,8 +107,8 @@ def write_indent(file : TextIOWrapper, lvl : int, str : str) -> None:
     file.write(f"{get_indent(lvl)}{str}")
 
 # Retarded jank shit, but it's the easiest thing I could do
-def undo_last_line(output_file : TextIOWrapper, indent : int) -> None:
-    output_file.seek(output_file.tell() - len(get_indent(indent)) - 1, 0)
+def undo_last_line(file : TextIOWrapper, indent : int) -> None:
+    file.seek(file.tell() - len(get_indent(indent)) - 1, 0)
 
 def generate_callback(callback : funcparser.GLFWFunc, output_file : TextIOWrapper, indent : int) -> None:
     line = f"public unsafe delegate {callback.ret_type} {callback.name}("
