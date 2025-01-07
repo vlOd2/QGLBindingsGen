@@ -104,7 +104,7 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
         cmd_params : dict[str, str] = {}
         cmd_ret_type = typeconverter.convert(cmd.ret_type)
         for name, type in cmd.params.items():
-            cmd_params[name] = typeconverter.convert(type)
+            cmd_params[typeconverter.sanitize_name(name)] = typeconverter.convert(type)
 
         lines = f"{_generate_cmd_wrapper(cmd, cmd_ret_type, cmd_params)}\n"
         lines += f"[QGLNativeAPI(\"{cmd.name}\")] internal static delegate* unmanaged<"
