@@ -49,12 +49,11 @@ TARGET_FEATURES = [
     "GL_VERSION_4_2"
 ]
 # OpenGL ES
-# This is disabled by default as QuickGL 
-# doesn't have the support for context creation with it
-# TARGET_FEATURES.extend([ 
-#     "GL_VERSION_ES_CM_1_0", "GL_ES_VERSION_2_0", 
-#     "GL_ES_VERSION_3_0", "GL_ES_VERSION_3_1"
-# ])
+TARGET_ES_FEATURES = [
+    "GL_VERSION_ES_CM_1_0", "GL_ES_VERSION_2_0", 
+    "GL_ES_VERSION_3_0", "GL_ES_VERSION_3_1"
+]
+TARGET_FEATURES.extend(TARGET_ES_FEATURES)
 
 # Target extensions to generate bindings for
 # No extension is included by default
@@ -120,8 +119,8 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
             write_indent(output_file, indent, f"{line}\n")
         write_indent(output_file, indent, "\n")
 
-def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int) -> None:
-    write_indent(output_file, indent, "[GLFeature]\n")
+def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int, isGLES : bool) -> None:
+    write_indent(output_file, indent, f"[GLFeature({'true' if isGLES else 'false'})]\n")
     write_indent(output_file, indent, f"public static unsafe class {class_name}\n")
     write_indent(output_file, indent, "{\n")
     indent += 1
@@ -138,7 +137,7 @@ def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWr
     indent -= 1
     write_indent(output_file, indent, "}\n")
 
-def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper):
+def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper, isGLES : bool):
     with open(LICENSE_FILE_NAME, "r") as file:
         for line in iter(file.readline, ""):
             output_file.write(f"// {line.strip()}\n")
@@ -150,7 +149,7 @@ def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper)
     write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
     write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
     write_indent(output_file, indent, "{\n")
-    generate_class(feature, class_name, output_file, indent + 1)
+    generate_class(feature, class_name, output_file, indent + 1, isGLES)
     write_indent(output_file, indent, "}\n")
 
 def main():
@@ -174,7 +173,7 @@ def main():
         print(f"Generating bindings for feature: {feature.name}")
         class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
-            generate(feature, class_name, output_file)
+            generate(feature, class_name, output_file, feature.name in TARGET_ES_FEATURES)
     
     for ext in extensions:
         if not ext.name in TARGET_EXTENSIONS:
@@ -182,7 +181,7 @@ def main():
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
-            generate(ext, class_name, output_file)
+            generate(ext, class_name, output_file, False)
 
     print("Done")
 
