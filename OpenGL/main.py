@@ -56,8 +56,8 @@ TARGET_ES_FEATURES = [
 TARGET_FEATURES.extend(TARGET_ES_FEATURES)
 
 # Target extensions to generate bindings for (or none for all)
-TARGET_EXTENSIONS = None
-#TARGET_EXTENSIONS = []
+# TARGET_EXTENSIONS = None
+TARGET_EXTENSIONS = []
 
 REGISTRY_FILE = "gl.xml"
 
@@ -96,7 +96,9 @@ def _generate_cmd_wrapper(command : GLCommand, cmd_ret_type : str, cmd_params : 
 
     return output
 
-def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> None:
+def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> int:
+    generated = 0
+
     for _cmd in feature.commands:
         cmd = _commands[_cmd]
 
@@ -118,6 +120,9 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
         for line in lines.splitlines():
             write_indent(output_file, indent, f"{line}\n")
         write_indent(output_file, indent, "\n")
+        generated += 1
+
+    return generated
 
 def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int, isGLES : bool) -> None:
     write_indent(output_file, indent, f"[GLFeature({'true' if isGLES else 'false'})]\n")
@@ -130,8 +135,8 @@ def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWr
     write_indent(output_file, indent, "#endregion\n")
     write_indent(output_file, indent, "\n")
     write_indent(output_file, indent, "#region Commands\n")
-    generate_commands(feature, output_file, indent)
-    undo_last_line(output_file, indent)
+    if generate_commands(feature, output_file, indent) > 0:
+        undo_last_line(output_file, indent)
     write_indent(output_file, indent, "#endregion\n")
 
     indent -= 1
@@ -170,7 +175,7 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     for feature in features:
-        if TARGET_FEATURES and not feature.name in TARGET_FEATURES:
+        if TARGET_FEATURES != None and not feature.name in TARGET_FEATURES:
             continue
         print(f"Generating bindings for feature: {feature.name}")
         class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
@@ -179,7 +184,7 @@ def main():
     
     os.makedirs(f"{OUTPUT_DIR}/Extensions", exist_ok=True)
     for ext in extensions:
-        if TARGET_EXTENSIONS and not ext.name in TARGET_EXTENSIONS:
+        if TARGET_EXTENSIONS != None and not ext.name in TARGET_EXTENSIONS:
             continue
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
