@@ -55,9 +55,9 @@ TARGET_ES_FEATURES = [
 ]
 TARGET_FEATURES.extend(TARGET_ES_FEATURES)
 
-# Target extensions to generate bindings for
-# No extension is included by default
-TARGET_EXTENSIONS = []
+# Target extensions to generate bindings for (or none for all)
+TARGET_EXTENSIONS = None
+#TARGET_EXTENSIONS = []
 
 REGISTRY_FILE = "gl.xml"
 
@@ -147,10 +147,9 @@ def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper,
     write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
     write_indent(output_file, indent, "\n")
     write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
-    write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
-    write_indent(output_file, indent, "{\n")
-    generate_class(feature, class_name, output_file, indent + 1, isGLES)
-    write_indent(output_file, indent, "}\n")
+    write_indent(output_file, indent, f"namespace {NAMESPACE};\n")
+    write_indent(output_file, indent, "\n")
+    generate_class(feature, class_name, output_file, indent, isGLES)
 
 def main():
     global _enums
@@ -168,19 +167,20 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     for feature in features:
-        if not feature.name in TARGET_FEATURES:
+        if TARGET_FEATURES and not feature.name in TARGET_FEATURES:
             continue
         print(f"Generating bindings for feature: {feature.name}")
         class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
             generate(feature, class_name, output_file, feature.name in TARGET_ES_FEATURES)
     
+    os.makedirs(f"{OUTPUT_DIR}/ext", exist_ok=True)
     for ext in extensions:
-        if not ext.name in TARGET_EXTENSIONS:
+        if TARGET_EXTENSIONS and not ext.name in TARGET_EXTENSIONS:
             continue
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
-        with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
+        with open(f"{OUTPUT_DIR}/ext/{class_name}.cs", "w") as output_file:
             generate(ext, class_name, output_file, False)
 
     print("Done")

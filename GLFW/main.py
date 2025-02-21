@@ -222,11 +222,10 @@ def main():
             # Begin namespace
             print("Generating namespace")
             write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
-            write_indent(output_file, indent, f"namespace {NAMESPACE}\n")
-            write_indent(output_file, indent, "{\n")
-            
+            write_indent(output_file, indent, f"namespace {NAMESPACE};\n")
+            write_indent(output_file, indent, "\n")
+
             # Callbacks
-            indent += 1
             print("Generating callbacks")
             write_indent(output_file, indent, "#region Callbacks\n")
 
@@ -247,10 +246,6 @@ def main():
             # Class, constants and functions
             print("Generating class")
             generate_class(file, output_file, indent)
-            indent -= 1
-
-            # End namespace
-            write_indent(output_file, indent, "}\n")
 
         print("Done")
 
