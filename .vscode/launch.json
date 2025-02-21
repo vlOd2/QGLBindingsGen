@@ -19,6 +19,14 @@
             "program": "${workspaceFolder}/OpenGL/main.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "OpenAL Bindings Generator",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/OpenAL/main.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
         }
     ]
 }
