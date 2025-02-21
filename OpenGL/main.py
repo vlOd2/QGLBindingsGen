@@ -183,7 +183,7 @@ def main():
             continue
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
-        with open(f"{OUTPUT_DIR}/ext/{class_name}.cs", "w") as output_file:
+        with open(f"{OUTPUT_DIR}/Extensions/{class_name}.cs", "w") as output_file:
             generate(ext, class_name, output_file, False, True)
 
     print("Done")
