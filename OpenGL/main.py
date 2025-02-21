@@ -137,7 +137,7 @@ def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWr
     indent -= 1
     write_indent(output_file, indent, "}\n")
 
-def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper, isGLES : bool):
+def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper, isGLES : bool, isEXT : bool):
     with open(LICENSE_FILE_NAME, "r") as file:
         for line in iter(file.readline, ""):
             output_file.write(f"// {line.strip()}\n")
@@ -147,7 +147,10 @@ def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper,
     write_indent(output_file, indent, "using QuickGLNS.Internal;\n")
     write_indent(output_file, indent, "\n")
     write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
-    write_indent(output_file, indent, f"namespace {NAMESPACE};\n")
+    if isEXT:
+        write_indent(output_file, indent, f"namespace {NAMESPACE}.Extensions;\n")
+    else:
+        write_indent(output_file, indent, f"namespace {NAMESPACE};\n")
     write_indent(output_file, indent, "\n")
     generate_class(feature, class_name, output_file, indent, isGLES)
 
@@ -172,16 +175,16 @@ def main():
         print(f"Generating bindings for feature: {feature.name}")
         class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
-            generate(feature, class_name, output_file, feature.name in TARGET_ES_FEATURES)
+            generate(feature, class_name, output_file, feature.name in TARGET_ES_FEATURES, False)
     
-    os.makedirs(f"{OUTPUT_DIR}/ext", exist_ok=True)
+    os.makedirs(f"{OUTPUT_DIR}/Extensions", exist_ok=True)
     for ext in extensions:
         if TARGET_EXTENSIONS and not ext.name in TARGET_EXTENSIONS:
             continue
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
         with open(f"{OUTPUT_DIR}/ext/{class_name}.cs", "w") as output_file:
-            generate(ext, class_name, output_file, False)
+            generate(ext, class_name, output_file, False, True)
 
     print("Done")
 
