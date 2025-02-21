@@ -42,7 +42,7 @@ def handle_const_parser(input_line : str) -> str | None:
     const_val : str
     const_type : str
     try:
-        value = int(const[1], 0)
+        value = int(const[1].replace("(", "").replace(")", ""), 0)
         const_type = typeconverter.get_for_const(value)
         const_val = hex(value).upper().replace('X', 'x', 1)
     except:
@@ -52,9 +52,14 @@ def handle_const_parser(input_line : str) -> str | None:
     return f"public const {const_type} {const[0]} = {const_val};"
 
 def _generate_wrapper_func(func : funcparser.ALFunc, func_ret_type : str, func_args : dict[str, str]) -> str:
-    output = f"public static {func_ret_type} {func.name}("
+    output = ""
+    if "bool" in func_ret_type:
+        output = "[return: MarshalAs(UnmanagedType.I1)] "
+    output += f"public static {func_ret_type} {func.name}("
     call_args = ""
     for i, (name, type) in enumerate(func_args.items()):
+        if "bool" in type:
+            output += "[MarshalAs(UnmanagedType.I1)] "
         output += f"{type} {name}"
         call_args += name
         if i < len(func_args) - 1:
@@ -80,7 +85,7 @@ def handle_func_parser(input_line : str) -> list[str] | None:
         func_args[converted[1]] = converted[0]
 
     definition = f"{_generate_wrapper_func(func, func_ret_type, func_args)}\n"
-    definition += f"[QGLNativeAPI(\"{func.name}\")] internal static delegate* unmanaged<"
+    definition += f"[QGLNativeAPI(\"{func.name}\")] internal static delegate* unmanaged[Cdecl]<"
     for name, type in func_args.items():
         definition += f"{type}, "
     definition += f"{func_ret_type}> _{func.name} = null;"

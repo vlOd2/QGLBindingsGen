@@ -75,7 +75,7 @@ def convert(type : str, name : str | None) -> tuple[str, str | None]:
             t = "nint"
             ptr_count = 0
         case "ALboolean":
-            t = "[MarshalAs(UnmanagedType.I1)] bool"
+            t = "bool"
         case "ALchar":
             t = "char"
         case "ALbyte":
@@ -101,7 +101,7 @@ def convert(type : str, name : str | None) -> tuple[str, str | None]:
         case "ALvoid":
             t = "void"
         case "ALCboolean":
-            t = "[MarshalAs(UnmanagedType.I1)] bool"
+            t = "bool"
         case "ALCchar":
             t = "char"
         case "ALCbyte":
