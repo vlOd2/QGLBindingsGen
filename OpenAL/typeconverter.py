@@ -77,7 +77,7 @@ def convert(type : str, name : str | None) -> tuple[str, str | None]:
         case "ALboolean":
             t = "bool"
         case "ALchar":
-            t = "char"
+            t = "byte"
         case "ALbyte":
             t = "sbyte"
         case "ALubyte":
@@ -103,7 +103,7 @@ def convert(type : str, name : str | None) -> tuple[str, str | None]:
         case "ALCboolean":
             t = "bool"
         case "ALCchar":
-            t = "char"
+            t = "byte"
         case "ALCbyte":
             t = "sbyte"
         case "ALCubyte":
