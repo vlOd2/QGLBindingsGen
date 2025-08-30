@@ -97,9 +97,9 @@ def handle_func_parser(input_line : str) -> list[str] | None:
         definition += f"{type}, "
     definition += f"{func_ret_type}> _{func.name} = null;"
 
-    if "__UNKNOWN_" in definition:
-        print(f"Skipping function (contains unknown types): {func.name}")
-        return None
+    # if "__UNKNOWN_" in definition:
+    #     print(f"Skipping function (contains unknown types): {func.name}")
+    #     return None
 
     return definition.splitlines()
 

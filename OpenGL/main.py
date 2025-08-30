@@ -32,6 +32,7 @@ import enumparser
 import commandparser
 import featureparser
 import typeconverter
+import re
 from commandparser import GLCommand
 from featureparser import GLFeature
 
@@ -56,8 +57,9 @@ TARGET_ES_FEATURES = [
 TARGET_FEATURES.extend(TARGET_ES_FEATURES)
 
 # Target extensions to generate bindings for (or none for all)
+# You can also add regex patterns to match by prefexing with @/
 #TARGET_EXTENSIONS = None
-TARGET_EXTENSIONS = []
+TARGET_EXTENSIONS = [ "@/GL_ARB+." ]
 
 REGISTRY_FILE = "gl.xml"
 
@@ -120,9 +122,9 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
             lines += f"{type}, "
         lines += f"{cmd_ret_type}> _{cmd.name} = null;"
 
-        if "__UNKNOWN_" in lines:
-            print(f"Skipping command (contains unknown types): {cmd.name}")
-            continue
+        # if "__UNKNOWN_" in lines:
+        #     print(f"Skipping command (contains unknown types): {cmd.name}")
+        #     continue
 
         for line in lines.splitlines():
             write_indent(output_file, indent, f"{line}\n")
@@ -192,7 +194,17 @@ def main():
     os.makedirs(f"{OUTPUT_DIR}/Extensions", exist_ok=True)
     for ext in extensions:
         if TARGET_EXTENSIONS != None and not ext.name in TARGET_EXTENSIONS:
-            continue
+            passed: bool = False
+            for pattern in TARGET_EXTENSIONS:
+                if not pattern.startswith("@/"):
+                    continue
+                pattern = pattern.removeprefix("@/")
+                if re.match(pattern, ext.name) != None:
+                    passed = True
+                    break
+            if not passed:
+                continue
+
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
         with open(f"{OUTPUT_DIR}/Extensions/{class_name}.cs", "w") as output_file:

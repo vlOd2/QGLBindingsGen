@@ -124,7 +124,9 @@ def convert(type : str, name : str | None, convert_fixed_array : bool = True, co
             case "size_t":
                 t = "nuint"
             case _:
-                t = f"__UNKNOWN_{type}"
+                # Fallback to a native pointer
+                #t = f"__UNKNOWN_{type}"
+                t = "nint"
                 if not type in _unknown:
                     _unknown.append(type)
                     print(f"Unknown type {type}")
