@@ -56,7 +56,7 @@ TARGET_ES_FEATURES = [
 TARGET_FEATURES.extend(TARGET_ES_FEATURES)
 
 # Target extensions to generate bindings for (or none for all)
-# TARGET_EXTENSIONS = None
+#TARGET_EXTENSIONS = None
 TARGET_EXTENSIONS = []
 
 REGISTRY_FILE = "gl.xml"
@@ -92,7 +92,14 @@ def _generate_cmd_wrapper(command : GLCommand, cmd_ret_type : str, cmd_params : 
         if i < len(cmd_params) - 1:
             output += ", "
             call_args += ", "
-    output += f") => _{command.name}({call_args});"
+    output += f") "
+    output += "{ "
+    output += f"QGLNativeAPI.Verify((nint)_{command.name}); "
+    if cmd_ret_type != "void":
+        output += f"return _{command.name}({call_args}); "
+    else:
+        output += f"_{command.name}({call_args}); "
+    output += "}"
 
     return output
 
@@ -124,8 +131,8 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
 
     return generated
 
-def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int, isGLES : bool) -> None:
-    write_indent(output_file, indent, f"[GLFeature({'true' if isGLES else 'false'})]\n")
+def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int, isGLES : bool, isEXT : bool) -> None:
+    write_indent(output_file, indent, f"[QGLFeature(\"{feature.name}\", {'true' if isEXT else 'false'}, {'true' if isGLES else 'false'})]\n")
     write_indent(output_file, indent, f"public static unsafe class {class_name}\n")
     write_indent(output_file, indent, "{\n")
     indent += 1
@@ -157,7 +164,7 @@ def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper,
     else:
         write_indent(output_file, indent, f"namespace {NAMESPACE};\n")
     write_indent(output_file, indent, "\n")
-    generate_class(feature, class_name, output_file, indent, isGLES)
+    generate_class(feature, class_name, output_file, indent, isGLES, isEXT)
 
 def main():
     global _enums

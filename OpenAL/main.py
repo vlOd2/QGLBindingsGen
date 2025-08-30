@@ -65,7 +65,14 @@ def _generate_wrapper_func(func : funcparser.ALFunc, func_ret_type : str, func_a
         if i < len(func_args) - 1:
             output += ", "
             call_args += ", "
-    output += f") => _{func.name}({call_args});"
+    output += f") "
+    output += "{ "
+    output += f"QGLNativeAPI.Verify((nint)_{func.name}); "
+    if func_ret_type != "void":
+        output += f"return _{func.name}({call_args}); "
+    else:
+        output += f"_{func.name}({call_args}); "
+    output += "}"
 
     return output
 
