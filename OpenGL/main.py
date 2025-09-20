@@ -60,6 +60,7 @@ TARGET_FEATURES.extend(TARGET_ES_FEATURES)
 # You can also add regex patterns to match by prefexing with @/
 #TARGET_EXTENSIONS = None
 TARGET_EXTENSIONS = [ "@/GL_ARB+." ]
+#TARGET_EXTENSIONS = []
 
 REGISTRY_FILE = "gl.xml"
 
@@ -96,7 +97,7 @@ def _generate_cmd_wrapper(command : GLCommand, cmd_ret_type : str, cmd_params : 
             call_args += ", "
     output += f") "
     output += "{ "
-    output += f"QGLNativeAPI.Verify((nint)_{command.name}); "
+    output += f"QGLFeature.VerifyFunc((nint)_{command.name}); "
     if cmd_ret_type != "void":
         output += f"return _{command.name}({call_args}); "
     else:
@@ -104,6 +105,19 @@ def _generate_cmd_wrapper(command : GLCommand, cmd_ret_type : str, cmd_params : 
     output += "}"
 
     return output
+
+def get_cmd_type(cmd : GLCommand) -> str:
+    cmd_params : dict[str, str] = {}
+    cmd_ret_type = typeconverter.convert(cmd.ret_type)
+    for name, type in cmd.params.items():
+        cmd_params[typeconverter.sanitize_name(name)] = typeconverter.convert(type)
+
+    s = f"delegate* unmanaged<"
+    for type in cmd_params.values():
+        s += f"{type}, "
+    s += f"{cmd_ret_type}>"
+
+    return s
 
 def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent : int) -> int:
     generated = 0
@@ -117,10 +131,7 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
             cmd_params[typeconverter.sanitize_name(name)] = typeconverter.convert(type)
 
         lines = f"{_generate_cmd_wrapper(cmd, cmd_ret_type, cmd_params)}\n"
-        lines += f"[QGLNativeAPI(\"{cmd.name}\")] internal static delegate* unmanaged<"
-        for type in cmd_params.values():
-            lines += f"{type}, "
-        lines += f"{cmd_ret_type}> _{cmd.name} = null;"
+        lines += f"internal static {get_cmd_type(cmd)} _{cmd.name} = null;"
 
         # if "__UNKNOWN_" in lines:
         #     print(f"Skipping command (contains unknown types): {cmd.name}")
@@ -133,8 +144,32 @@ def generate_commands(feature : GLFeature, output_file : TextIOWrapper, indent :
 
     return generated
 
+def generate_loader_functions(feature : GLFeature, output_file : TextIOWrapper, indent : int, isGLES : bool, isEXT : bool) -> None:
+    write_indent(output_file, indent, "internal static void Load()\n")
+    write_indent(output_file, indent, "{\n")
+    indent += 1
+    for _cmd in feature.commands:
+        cmd = _commands[_cmd]
+        write_indent(output_file, indent, f"_{cmd.name} = ({get_cmd_type(cmd)})QuickGL.GetGLProcAddress(\"{cmd.name}\");\n")
+    indent -= 1
+    write_indent(output_file, indent, "}\n")
+    write_indent(output_file, indent, "\n")
+
+    write_indent(output_file, indent, "internal static void Unload()\n")
+    write_indent(output_file, indent, "{\n")
+    indent += 1
+    for _cmd in feature.commands:
+        cmd = _commands[_cmd]
+        write_indent(output_file, indent, f"_{cmd.name} = null;\n")
+    indent -= 1
+    write_indent(output_file, indent, "}\n")
+    write_indent(output_file, indent, "\n")
+
+    feature_info = "internal static QGLFeature FeatureInfo => "
+    feature_info += f"new(\"{feature.name}\", {'true' if isEXT else 'false'}, {'true' if isGLES else 'false'});\n"
+    write_indent(output_file, indent, feature_info)
+
 def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWrapper, indent : int, isGLES : bool, isEXT : bool) -> None:
-    write_indent(output_file, indent, f"[QGLFeature(\"{feature.name}\", {'true' if isEXT else 'false'}, {'true' if isGLES else 'false'})]\n")
     write_indent(output_file, indent, f"public static unsafe class {class_name}\n")
     write_indent(output_file, indent, "{\n")
     indent += 1
@@ -143,10 +178,14 @@ def generate_class(feature : GLFeature, class_name : str, output_file : TextIOWr
     generate_enums(feature, output_file, indent)
     write_indent(output_file, indent, "#endregion\n")
     write_indent(output_file, indent, "\n")
+
     write_indent(output_file, indent, "#region Commands\n")
     if generate_commands(feature, output_file, indent) > 0:
         undo_last_line(output_file, indent)
     write_indent(output_file, indent, "#endregion\n")
+    write_indent(output_file, indent, "\n")
+
+    generate_loader_functions(feature, output_file, indent, isGLES, isEXT)
 
     indent -= 1
     write_indent(output_file, indent, "}\n")
@@ -168,9 +207,50 @@ def generate(feature : GLFeature, class_name : str, output_file : TextIOWrapper,
     write_indent(output_file, indent, "\n")
     generate_class(feature, class_name, output_file, indent, isGLES, isEXT)
 
+def generate_bindings_manager(class_names : list[str], ext_count : int):
+    with open(f"{OUTPUT_DIR}GLBindingsManager.cs", "w") as output_file:
+        with open(LICENSE_FILE_NAME, "r") as file:
+            for line in iter(file.readline, ""):
+                output_file.write(f"// {line.strip()}\n")
+            output_file.write("\n")
+
+        indent = 0
+        if ext_count > 0:
+            write_indent(output_file, indent, f"using {NAMESPACE}.Extensions;\n")
+            write_indent(output_file, indent, "\n")
+        write_indent(output_file, indent, f"// Bindings generated at {datetime.datetime.now()}\n")
+        write_indent(output_file, indent, f"namespace {NAMESPACE};\n")
+        write_indent(output_file, indent, "\n")
+
+        write_indent(output_file, indent, f"internal static unsafe class GLBindingsManager\n")
+        write_indent(output_file, indent, "{\n")
+        indent += 1
+
+        write_indent(output_file, indent, "public static void Load()\n")
+        write_indent(output_file, indent, "{\n")
+        indent += 1
+        for clazz in class_names:
+            write_indent(output_file, indent, f"if (QuickGL.IsFeatureSupported({clazz}.FeatureInfo)) {clazz}.Load();\n")
+        indent -= 1
+        write_indent(output_file, indent, "}\n")
+        write_indent(output_file, indent, "\n")
+
+        write_indent(output_file, indent, "public static void Unload()\n")
+        write_indent(output_file, indent, "{\n")
+        indent += 1
+        for clazz in class_names:
+            write_indent(output_file, indent, f"{clazz}.Unload();\n")
+        indent -= 1
+        write_indent(output_file, indent, "}\n")
+
+        indent -= 1
+        write_indent(output_file, indent, "}\n")
+
 def main():
     global _enums
     global _commands
+    class_names : list[str] = []
+    ext_count : int = 0
 
     root : xml.Element = xml.parse(REGISTRY_FILE).getroot()
     print("Parsing enums")
@@ -188,6 +268,7 @@ def main():
             continue
         print(f"Generating bindings for feature: {feature.name}")
         class_name = feature.name.replace("GL_", "GL").replace("VERSION_", "").replace("_", "")
+        class_names.append(class_name)
         with open(f"{OUTPUT_DIR}{class_name}.cs", "w") as output_file:
             generate(feature, class_name, output_file, feature.name in TARGET_ES_FEATURES, False)
     
@@ -207,8 +288,13 @@ def main():
 
         print(f"Generating bindings for extension: {ext.name}")
         class_name = ext.name.replace("GL_", "GLEXT###").replace("_", "").replace("###", "_")
+        class_names.append(class_name)
+        ext_count += 1
         with open(f"{OUTPUT_DIR}/Extensions/{class_name}.cs", "w") as output_file:
             generate(ext, class_name, output_file, False, True)
+
+    print("Generating bindings manager")
+    generate_bindings_manager(class_names, ext_count)
 
     print("Done")
 
