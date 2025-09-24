@@ -2,8 +2,12 @@
 
 namespace QGLBindingsGen.CParsing;
 
-internal class CFunction
+internal partial class CFunction
 {
+    #region Patterns
+    [GeneratedRegex(@"([a-zA-Z0-9_ *]+) ([a-zA-Z0-9_]+)\((.*)\)\s*?;")]
+    private static partial Regex FuncPattern();
+    #endregion
     public string Name;
     public CType ReturnType;
     public Dictionary<string, CType> Args;
@@ -26,7 +30,7 @@ internal class CFunction
 
     public static CFunction Parse(CParserContext ctx, string line)
     {
-        Match match = ctx.FuncPattern.Match(line);
+        Match match = FuncPattern().Match(line);
 
         if (!match.Success)
             return null;

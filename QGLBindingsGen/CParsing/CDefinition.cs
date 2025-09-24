@@ -8,7 +8,7 @@ internal partial class CDefinition
     [GeneratedRegex(@"typedef struct ([a-zA-Z0-9_*]+) ([a-zA-Z0-9_*]+);")]
     public static partial Regex OpaqueStructPattern();
 
-    [GeneratedRegex(@"typedef ([a-zA-Z0-9_ *]+) \(\*\s*([a-zA-Z0-9_]+)\)\((.*)\);")]
+    [GeneratedRegex(@"typedef\s*?([a-zA-Z0-9_ *]+)\(\s*?\*\s*([a-zA-Z0-9_]+)\)\((.*)\)\s*?;")]
     private static partial Regex CallbackPattern();
     #endregion
     public string Name;
@@ -22,7 +22,6 @@ internal partial class CDefinition
 
     public static CDefinition ParseOpaqueStruct(string line)
     {
-
         Match match = OpaqueStructPattern().Match(line);
         if (!match.Success)
             return null;

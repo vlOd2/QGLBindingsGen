@@ -8,6 +8,9 @@ internal partial class CStruct
     #region Patterns
     [GeneratedRegex(@"struct ([a-zA-Z0-9_*]+)\s*?{((?:.|\s)+?)\n}(?:[a-zA-Z0-9_* ]+)?;")]
     private static partial Regex StructPattern();
+
+    [GeneratedRegex(@"([a-zA-Z0-9_ *]+)\(\*\s*([a-zA-Z0-9_]+)\)\((.*)\)")]
+    private static partial Regex CallbackFieldPattern();
     #endregion
     public string Name;
     public Dictionary<string, CType> Fields;
@@ -27,7 +30,15 @@ internal partial class CStruct
             if (l.StartsWith("//") || l.StartsWith("/*") || l.StartsWith('!') || l.StartsWith('*'))
                 continue;
 
-            Match match = CParser.ArgsPattern().Match(l);
+            Match match = CallbackFieldPattern().Match(l);
+            if (match.Success)
+            {
+                // TODO: Properly parse callback fields
+                Fields[match.Groups[2].Value.Trim()] = new CType("nint");
+                continue;
+            }
+
+            match = CParser.ArgsPattern().Match(l);
             if (!match.Success)
                 continue;
 
@@ -38,10 +49,10 @@ internal partial class CStruct
         }
     }
 
-    private static void SearchStructs(string[] lines, Action<Match> handleStructMatch)
+    private static void SearchStructs(List<string> lines, Action<Match> handleStructMatch)
     {
         string currentStruct = null;
-        for (int i = 0; i < lines.Length; i++)
+        for (int i = 0; i < lines.Count; i++)
         {
             string line = lines[i].Trim();
             if (currentStruct == null)
@@ -68,7 +79,7 @@ internal partial class CStruct
         }
     }
 
-    public static string[] ParseAllNames(string[] lines) 
+    public static string[] ParseAllNames(List<string> lines) 
     {
         List<string> names = [];
 
@@ -77,7 +88,7 @@ internal partial class CStruct
         return [..names];
     }
 
-    public static CStruct[] ParseAll(CParserContext ctx, string[] lines)
+    public static CStruct[] ParseAll(CParserContext ctx, List<string> lines)
     {
         List<CStruct> structs = [];
 

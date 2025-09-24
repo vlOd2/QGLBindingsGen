@@ -9,8 +9,29 @@ internal static partial class CParser
     public static partial Regex ArgsPattern();
     #endregion
 
-    public static void ParseFile(string[] lines, CParserContext ctx)
+    public static void ParseFile(string[] rawLines, CParserContext ctx)
     {
+        List<string> lines = [];
+
+        foreach (string rawLine in rawLines)
+        {
+            string line = rawLine.Trim();
+
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+            if (line.StartsWith("//") || (line.StartsWith("/*") && line.EndsWith("*/")))
+                continue;
+
+            foreach (string word in ctx.RemoveWords)
+            {
+                line = line.Replace($" {word} ", " ").Trim();
+                line = line.Replace($" {word}", " ").Trim();
+                line = line.Replace($"{word} ", " ").Trim();
+            }
+
+            lines.Add(line);
+        }
+
         Console.WriteLine("Parsing constants and opaque structs");
         foreach (string line in lines)
         {

@@ -6,12 +6,6 @@ namespace QGLBindingsGen;
 
 public partial class Program
 {
-    [GeneratedRegex(@"GLFWAPI ([a-zA-Z0-9_ *]+) (glfw[a-zA-Z0-9_]+)\((.*)\);")]
-    private static partial Regex GLFWFuncPattern();
-
-    [GeneratedRegex(@"_UI_EXTERN ([a-zA-Z0-9_ *]+) (ui[a-zA-Z0-9_]+)\((.*)\);")]
-    private static partial Regex LibUIFuncPattern();
-
     private static Dictionary<string, object> DumpContext(CParserContext ctx)
     {
         Dictionary<string, object> dump = [];
@@ -71,9 +65,8 @@ public partial class Program
         return dump;
     }
 
-    private static void DumpHeader(string name, Regex funcPattern)
+    private static void DumpHeader(string name, CParserContext ctx)
     {
-        CParserContext ctx = new(funcPattern);
         CParser.ParseFile(File.ReadAllLines($"{name}.h"), ctx);
         using FileStream dumpStream = File.Open($"{name}-dump.json", FileMode.Create);
         JsonSerializer.Serialize(dumpStream, DumpContext(ctx), new JsonSerializerOptions()
@@ -84,7 +77,22 @@ public partial class Program
 
     static void Main()
     {
-        DumpHeader("glfw3", GLFWFuncPattern());
-        DumpHeader("libui", LibUIFuncPattern());
+        CParserContext alCtx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API"]);
+        alCtx.TypeMap.Add("ALboolean", "byte");
+        alCtx.TypeMap.Add("ALchar", "byte");
+        alCtx.TypeMap.Add("ALbyte", "sbyte");
+        alCtx.TypeMap.Add("ALubyte", "byte");
+        alCtx.TypeMap.Add("ALshort", "short");
+        alCtx.TypeMap.Add("ALushort", "ushort");
+        alCtx.TypeMap.Add("ALint", "int");
+        alCtx.TypeMap.Add("ALuint", "uint");
+        alCtx.TypeMap.Add("ALsizei", "int");
+        alCtx.TypeMap.Add("ALenum", "int");
+        alCtx.TypeMap.Add("ALfloat", "float");
+        alCtx.TypeMap.Add("ALdouble", "double");
+        alCtx.TypeMap.Add("ALvoid", "void");
+        DumpHeader("glfw3", new(["GLFWAPI"]));
+        DumpHeader("al", alCtx);
+        //DumpHeader("libui", new());
     }
 }
