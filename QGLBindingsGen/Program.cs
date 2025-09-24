@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 using QGLBindingsGen.CParsing;
 
@@ -10,7 +9,7 @@ public partial class Program
     [GeneratedRegex(@"GLFWAPI ([a-zA-Z0-9_ *]+) (glfw[a-zA-Z0-9_]+)\((.*)\);")]
     private static partial Regex GLFWFuncPattern();
 
-    [GeneratedRegex(@"_UI_EXTERN ([a-zA-Z0-9_ *]+) (glfw[a-zA-Z0-9_]+)\((.*)\);")]
+    [GeneratedRegex(@"_UI_EXTERN ([a-zA-Z0-9_ *]+) (ui[a-zA-Z0-9_]+)\((.*)\);")]
     private static partial Regex LibUIFuncPattern();
 
     private static Dictionary<string, object> DumpContext(CParserContext ctx)
@@ -72,15 +71,20 @@ public partial class Program
         return dump;
     }
 
-    static void Main()
+    private static void DumpHeader(string name, Regex funcPattern)
     {
-        CParserContext ctx = new(LibUIFuncPattern());
-        CParser.ParseFile(File.ReadAllLines("ui.h"), ctx);
-
-        using FileStream dumpStream = File.Open("dump.json", FileMode.Create);
+        CParserContext ctx = new(funcPattern);
+        CParser.ParseFile(File.ReadAllLines($"{name}.h"), ctx);
+        using FileStream dumpStream = File.Open($"{name}-dump.json", FileMode.Create);
         JsonSerializer.Serialize(dumpStream, DumpContext(ctx), new JsonSerializerOptions()
         {
             WriteIndented = true
         });
+    }
+
+    static void Main()
+    {
+        DumpHeader("glfw3", GLFWFuncPattern());
+        DumpHeader("libui", LibUIFuncPattern());
     }
 }

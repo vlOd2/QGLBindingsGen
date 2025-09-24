@@ -11,9 +11,7 @@ internal static partial class CParser
 
     public static void ParseFile(string[] lines, CParserContext ctx)
     {
-        string allLines = string.Join("\n", lines);
-
-        Console.WriteLine("Parsing constants");
+        Console.WriteLine("Parsing constants and opaque structs");
         foreach (string line in lines)
         {
             CConstant cconst = CConstant.Parse(line);
@@ -27,10 +25,11 @@ internal static partial class CParser
                 ctx.Definitions.Add(def);
         }
 
-        Console.WriteLine("Parsing constants");
-        string[] structNames = CStruct.ParseAllNames(allLines);
+        Console.WriteLine("Lazy parsing structs");
+        string[] structNames = CStruct.ParseAllNames(lines);
         ctx.Definitions.AddRange(structNames.Select(name => new CDefinition(name, null)));
 
+        Console.WriteLine("Parsing callbacks");
         foreach (string line in lines)
         {
             CDefinition def = CDefinition.ParseCallback(ctx, line);
@@ -39,7 +38,8 @@ internal static partial class CParser
             ctx.Definitions.Add(def);
         }
 
-        ctx.Structs.AddRange(CStruct.ParseAll(ctx, allLines));
+        Console.WriteLine("Parsing structs");
+        ctx.Structs.AddRange(CStruct.ParseAll(ctx, lines));
         for (int i = ctx.Definitions.Count - 1; i >= 0; i--)
         {
             if (structNames.Contains(ctx.Definitions[i].Name))
@@ -49,6 +49,7 @@ internal static partial class CParser
             }
         }
 
+        Console.WriteLine("Parsing functions");
         foreach (string line in lines)
         {
             CFunction func = CFunction.Parse(ctx, line);

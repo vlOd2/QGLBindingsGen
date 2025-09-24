@@ -6,7 +6,7 @@ namespace QGLBindingsGen.CParsing;
 internal partial class CStruct
 {
     #region Patterns
-    [GeneratedRegex(@"struct ([a-zA-Z0-9_*]+)\s*?{\s*((?:[a-zA-Z0-9_*\n; \[\]\(\),]+(?:\/\/.*)?(?:\/\*(?:.|\n)*?\*\/)?\s*)+)\n}(?:[a-zA-Z0-9_* ]+)?;")]
+    [GeneratedRegex(@"struct ([a-zA-Z0-9_*]+)\s*?{((?:.|\s)+?)\n}(?:[a-zA-Z0-9_* ]+)?;")]
     private static partial Regex StructPattern();
     #endregion
     public string Name;
@@ -38,23 +38,56 @@ internal partial class CStruct
         }
     }
 
-    public static string[] ParseAllNames(string lines) 
+    private static void SearchStructs(string[] lines, Action<Match> handleStructMatch)
+    {
+        string currentStruct = null;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].Trim();
+            if (currentStruct == null)
+            {
+                if (!line.StartsWith("struct ") && !line.StartsWith("typedef struct "))
+                    continue;
+
+                if (!CDefinition.OpaqueStructPattern().Match(line).Success)
+                    currentStruct = $"{line}\n";
+            }
+            else
+            {
+                currentStruct += $"{line}\n";
+
+                if (!line.Contains('}'))
+                    continue;
+
+                Match match = StructPattern().Match(currentStruct);
+                currentStruct = null;
+
+                if (match.Success)
+                    handleStructMatch(match);
+            }
+        }
+    }
+
+    public static string[] ParseAllNames(string[] lines) 
     {
         List<string> names = [];
-        foreach (Match match in StructPattern().Matches(lines))
-            names.Add(match.Groups[1].Value.Trim());
+
+        SearchStructs(lines, match => names.Add(match.Groups[1].Value.Trim()));
+
         return [..names];
     }
 
-    public static CStruct[] ParseAll(CParserContext ctx, string lines)
+    public static CStruct[] ParseAll(CParserContext ctx, string[] lines)
     {
         List<CStruct> structs = [];
-        foreach (Match match in StructPattern().Matches(lines))
+
+        SearchStructs(lines, match => 
         {
             string name = match.Groups[1].Value.Trim();
             string fields = match.Groups[2].Value.Trim();
             structs.Add(new CStruct(ctx, name, fields));
-        }
+        });
+
         return [.. structs];
     }
 }

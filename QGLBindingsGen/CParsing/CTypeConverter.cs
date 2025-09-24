@@ -61,6 +61,11 @@ internal partial class CTypeConverter
 
         if (argName != null)
         {
+            while (argName.StartsWith('*'))
+            {
+                argName = argName[1..].Trim();
+                ptrCount++;
+            }
             if (argName.EndsWith("[]"))
             {
                 ptrCount++;
@@ -121,6 +126,8 @@ internal partial class CTypeConverter
             "uint16_t" => "ushort",
             "uint32_t" => "uint",
             "uint64_t" => "ulong",
+            "intptr_t" => "nint",
+            "uintptr_t" => "nuint",
             _ => null
         };
         convertedType ??= ctx.TypeMap.GetValueOrDefault(cType);

@@ -6,7 +6,7 @@ internal partial class CDefinition
 {
     #region Pattern
     [GeneratedRegex(@"typedef struct ([a-zA-Z0-9_*]+) ([a-zA-Z0-9_*]+);")]
-    private static partial Regex OpaqueStructPattern();
+    public static partial Regex OpaqueStructPattern();
 
     [GeneratedRegex(@"typedef ([a-zA-Z0-9_ *]+) \(\*\s*([a-zA-Z0-9_]+)\)\((.*)\);")]
     private static partial Regex CallbackPattern();
