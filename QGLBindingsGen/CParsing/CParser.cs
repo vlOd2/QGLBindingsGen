@@ -1,6 +1,11 @@
-﻿namespace QGLBindingsGen.CParsing;
+﻿using System.Text.RegularExpressions;
 
-internal class CParser
+namespace QGLBindingsGen.CParsing;
+
+internal partial class CParser
 {
-
+    #region Patterns
+    [GeneratedRegex(@"([a-zA-Z0-9_ *]+(?= )(?!, ))([a-zA-Z0-9_ *]+(?:\[\d*\]){0,1})")]
+    public static partial Regex ArgsPattern();
+    #endregion
 }
