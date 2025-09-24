@@ -10,6 +10,7 @@ internal class CParserContext
     public readonly List<CStruct> Structs = [];
     public readonly Dictionary<string, string> TypeMap = [];
     public readonly List<string> UnknownTypes = [];
+    public readonly List<CFunction> Functions = [];
 
     public CParserContext(Regex funcPattern)
     {

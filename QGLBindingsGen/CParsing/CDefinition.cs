@@ -20,13 +20,18 @@ internal partial class CDefinition
         Callback = callback;
     }
 
-    public static CDefinition Parse(CParserContext ctx, string line)
+    public static CDefinition ParseOpaqueStruct(string line)
     {
-        Match match;
-        if ((match = OpaqueStructPattern().Match(line)).Success)
-            return new CDefinition(match.Groups[2].Value.Trim(), null);
 
-        match = CallbackPattern().Match(line);
+        Match match = OpaqueStructPattern().Match(line);
+        if (!match.Success)
+            return null;
+        return new CDefinition(match.Groups[2].Value.Trim(), null);
+    }
+
+    public static CDefinition ParseCallback(CParserContext ctx, string line)
+    {
+        Match match = CallbackPattern().Match(line);
         if (!match.Success)
             return null;
 
