@@ -38,7 +38,15 @@ internal partial class CStruct
         }
     }
 
-    public static CStruct[] ParseAll(CParserContext ctx, string lines) 
+    public static string[] ParseAllNames(string lines) 
+    {
+        List<string> names = [];
+        foreach (Match match in StructPattern().Matches(lines))
+            names.Add(match.Groups[1].Value.Trim());
+        return [..names];
+    }
+
+    public static CStruct[] ParseAll(CParserContext ctx, string lines)
     {
         List<CStruct> structs = [];
         foreach (Match match in StructPattern().Matches(lines))
@@ -47,6 +55,6 @@ internal partial class CStruct
             string fields = match.Groups[2].Value.Trim();
             structs.Add(new CStruct(ctx, name, fields));
         }
-        return [..structs];
+        return [.. structs];
     }
 }

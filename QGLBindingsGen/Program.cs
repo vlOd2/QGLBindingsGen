@@ -13,6 +13,6 @@ public partial class Program
         CParserContext ctx = new(GLFWFuncPattern());
         CParser.ParseFile(File.ReadAllLines("glfw3.h"), ctx);
 
-
+        
     }
 }

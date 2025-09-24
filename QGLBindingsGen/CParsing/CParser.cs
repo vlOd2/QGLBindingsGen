@@ -15,11 +15,19 @@ internal static partial class CParser
 
         foreach (string line in lines)
         {
-            CDefinition def = CDefinition.ParseOpaqueStruct(line);
-            if (def == null)
+            CConstant cconst = CConstant.Parse(line);
+            if (cconst != null)
+            {
+                ctx.Constants.Add(cconst);
                 continue;
-            ctx.Definitions.Add(def);
+            }
+            CDefinition def = CDefinition.ParseOpaqueStruct(line);
+            if (def != null)
+                ctx.Definitions.Add(def);
         }
+
+        string[] structNames = CStruct.ParseAllNames(allLines);
+        ctx.Definitions.AddRange(structNames.Select(name => new CDefinition(name, null)));
 
         foreach (string line in lines)
         {
@@ -30,6 +38,14 @@ internal static partial class CParser
         }
 
         ctx.Structs.AddRange(CStruct.ParseAll(ctx, allLines));
+        for (int i = ctx.Definitions.Count - 1; i >= 0; i--)
+        {
+            if (structNames.Contains(ctx.Definitions[i].Name))
+            {
+                ctx.Definitions.RemoveAt(i);
+                i--;
+            }
+        }
 
         foreach (string line in lines)
         {
