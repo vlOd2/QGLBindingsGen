@@ -11,6 +11,12 @@ internal partial class CTypeConverter
     [GeneratedRegex(@"^.*\[(\d+)\]$")]
     private partial Regex ArraySizePattern();
     #endregion
+    private CParserContext ctx;
+
+    public CTypeConverter(CParserContext ctx)
+    {
+        this.ctx = ctx;
+    }
 
     private static readonly List<string> RESERVED_NAMES =
     [
@@ -23,16 +29,6 @@ internal partial class CTypeConverter
         "stackalloc", "static", "string", "struct", "switch", "this", "throw", "true", "try", "typeof",
         "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while"
     ];
-    private readonly List<string> opaqueStructs = [];
-    private readonly List<string> dataStructs = [];
-    private readonly Dictionary<string, string> typeMap = [];
-    private readonly List<string> unknownTypes = [];
-
-    public void AddOpaqueStruct(string name) => opaqueStructs.Add(name);
-
-    public void AddDataStruct(string name) => dataStructs.Add(name);
-
-    public void AddTypeMap(string cType, string nType) => typeMap[cType] = nType;
 
     public static CType GetMacroLiteralType(string val)
     {
@@ -83,16 +79,23 @@ internal partial class CTypeConverter
         }
 
         string convertedType = null;
-        if (opaqueStructs.Contains(cType))
+        foreach (CDefinition def in ctx.Definitions)
         {
-            convertedType = "nint";
-            ptrCount--;
-            if (ptrCount < 0)
-                ptrCount = 0;
+            if (cType == def.Name)
+            {
+                convertedType = cType;
+                break;
+            }
         }
 
-        if (dataStructs.Contains(cType))
-            convertedType = cType;
+        foreach (CStruct s in ctx.Structs)
+        {
+            if (cType == s.Name)
+            {
+                convertedType = cType;
+                break;
+            }
+        }
 
         convertedType ??= cType switch
         {
@@ -120,15 +123,15 @@ internal partial class CTypeConverter
             "uint64_t" => "ulong",
             _ => null
         };
-        convertedType ??= typeMap.GetValueOrDefault(cType);
+        convertedType ??= ctx.TypeMap.GetValueOrDefault(cType);
 
         if (convertedType == null)
         {
             convertedType = "nint";
             ptrCount = 0;
-            if (!unknownTypes.Contains(cType))
+            if (!ctx.UnknownTypes.Contains(cType))
             {
-                unknownTypes.Add(cType);
+                ctx.UnknownTypes.Add(cType);
                 Console.WriteLine($"Unknown type: {cType}");
             }
         }

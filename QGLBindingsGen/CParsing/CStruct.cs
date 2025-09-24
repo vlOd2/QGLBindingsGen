@@ -6,7 +6,7 @@ namespace QGLBindingsGen.CParsing;
 internal partial class CStruct
 {
     #region Patterns
-    [GeneratedRegex(@"typedef struct ([a-zA-Z0-9_*]+)\n{\s*((?:[a-zA-Z0-9_*\n; \[\]]+(?:\/\/.*)?(?:\/\*(?:.|\n)*?\*\/)?\s*)+)\n} (?:[a-zA-Z0-9_*]+);")]
+    [GeneratedRegex(@"struct ([a-zA-Z0-9_*]+)\s*?{\s*((?:[a-zA-Z0-9_*\n; \[\]\(\),]+(?:\/\/.*)?(?:\/\*(?:.|\n)*?\*\/)?\s*)+)\n}(?:[a-zA-Z0-9_* ]+)?;")]
     private static partial Regex StructPattern();
     #endregion
     public string Name;

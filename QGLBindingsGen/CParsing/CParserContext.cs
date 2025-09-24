@@ -6,10 +6,14 @@ internal class CParserContext
 {
     public Regex FuncPattern { get; private set; }
     public CTypeConverter TypeConv { get; private set; }
+    public readonly List<CDefinition> Definitions = [];
+    public readonly List<CStruct> Structs = [];
+    public readonly Dictionary<string, string> TypeMap = [];
+    public readonly List<string> UnknownTypes = [];
 
     public CParserContext(Regex funcPattern)
     {
         FuncPattern = funcPattern;
-        TypeConv = new();
+        TypeConv = new(this);
     }
 }
