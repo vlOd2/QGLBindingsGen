@@ -37,8 +37,16 @@ public partial class Program
                 else
                 {
                     Console.WriteLine($"Opaque struct {def.Name}");
-                }    
+                }
             }
+        }
+
+        CStruct[] structs = CStruct.ParseAll(ctx, headerData);
+        foreach (CStruct s in structs)
+        {
+            Console.WriteLine($"Struct {s.Name}");
+            foreach ((string fName, CType fType) in s.Fields)
+                Console.WriteLine($"    {fName}: {fType}");
         }
     }
 }

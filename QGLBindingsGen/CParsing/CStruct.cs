@@ -38,16 +38,15 @@ internal partial class CStruct
         }
     }
 
-    public static CStruct Parse(CParserContext ctx, string line) 
+    public static CStruct[] ParseAll(CParserContext ctx, string lines) 
     {
-        Match match = StructPattern().Match(line);
-
-        if (!match.Success)
-            return null;
-
-        string name = match.Groups[1].Value.Trim();
-        string fields = match.Groups[2].Value.Trim();
-
-        return new CStruct(ctx, name, fields);
+        List<CStruct> structs = [];
+        foreach (Match match in StructPattern().Matches(lines))
+        {
+            string name = match.Groups[1].Value.Trim();
+            string fields = match.Groups[2].Value.Trim();
+            structs.Add(new CStruct(ctx, name, fields));
+        }
+        return [..structs];
     }
 }
