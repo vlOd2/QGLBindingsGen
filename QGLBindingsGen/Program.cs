@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.RegularExpressions;
 using QGLBindingsGen.CParsing;
 
 namespace QGLBindingsGen;
@@ -67,12 +66,14 @@ public partial class Program
 
     private static void DumpHeader(string name, CParserContext ctx)
     {
+        Console.WriteLine($"- Dumping header {name}.h");
         CParser.ParseFile(File.ReadAllLines($"{name}.h"), ctx);
         using FileStream dumpStream = File.Open($"{name}-dump.json", FileMode.Create);
         JsonSerializer.Serialize(dumpStream, DumpContext(ctx), new JsonSerializerOptions()
         {
             WriteIndented = true
         });
+        Console.WriteLine();
     }
 
     static void Main()
@@ -93,6 +94,6 @@ public partial class Program
         alCtx.TypeMap.Add("ALvoid", "void");
         DumpHeader("glfw3", new(["GLFWAPI"]));
         DumpHeader("al", alCtx);
-        //DumpHeader("libui", new());
+        DumpHeader("libui", new(["_UI_EXTERN"]));
     }
 }
