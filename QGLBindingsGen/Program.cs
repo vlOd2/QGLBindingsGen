@@ -10,11 +10,11 @@ public partial class Program
     [GeneratedRegex(@"GLFWAPI ([a-zA-Z0-9_ *]+) (glfw[a-zA-Z0-9_]+)\((.*)\);")]
     private static partial Regex GLFWFuncPattern();
 
-    static void Main()
-    {
-        CParserContext ctx = new(GLFWFuncPattern());
-        CParser.ParseFile(File.ReadAllLines("glfw3.h"), ctx);
+    [GeneratedRegex(@"_UI_EXTERN ([a-zA-Z0-9_ *]+) (glfw[a-zA-Z0-9_]+)\((.*)\);")]
+    private static partial Regex LibUIFuncPattern();
 
+    private static Dictionary<string, object> DumpContext(CParserContext ctx)
+    {
         Dictionary<string, object> dump = [];
         Dictionary<string, object> consts = [];
         Dictionary<string, object> defs = [];
@@ -22,7 +22,12 @@ public partial class Program
         Dictionary<string, object> funcs = [];
 
         foreach (CConstant cconst in ctx.Constants)
-            consts[cconst.Name] = cconst.Value;
+        {
+            Dictionary<string, string> c = [];
+            c["value"] = cconst.Value;
+            c["type"] = cconst.CType.ToString();
+            consts[cconst.Name] = c;
+        }
 
         foreach (CDefinition def in ctx.Definitions)
         {
@@ -30,7 +35,7 @@ public partial class Program
             d["type"] = def.Callback == null ? "opaque_struct" : "callback";
             if (def.Callback != null)
             {
-                d["rettype"] = def.Callback.ReturnType;
+                d["rettype"] = def.Callback.ReturnType.ToString();
                 Dictionary<string, string> args = [];
                 foreach (KeyValuePair<string, CType> arg in def.Callback.Args)
                     args[arg.Key] = arg.Value.ToString();
@@ -50,7 +55,7 @@ public partial class Program
         foreach (CFunction func in ctx.Functions)
         {
             Dictionary<string, object> f = [];
-            f["rettype"] = func.ReturnType;
+            f["rettype"] = func.ReturnType.ToString();
             Dictionary<string, string> args = [];
             foreach (KeyValuePair<string, CType> arg in func.Args)
                 args[arg.Key] = arg.Value.ToString();
@@ -63,9 +68,17 @@ public partial class Program
         dump["structs"] = structs;
         dump["funcs"] = funcs;
         dump["unknownTypes"] = ctx.UnknownTypes;
-        
+
+        return dump;
+    }
+
+    static void Main()
+    {
+        CParserContext ctx = new(LibUIFuncPattern());
+        CParser.ParseFile(File.ReadAllLines("ui.h"), ctx);
+
         using FileStream dumpStream = File.Open("dump.json", FileMode.Create);
-        JsonSerializer.Serialize(dumpStream, dump, new JsonSerializerOptions()
+        JsonSerializer.Serialize(dumpStream, DumpContext(ctx), new JsonSerializerOptions()
         {
             WriteIndented = true
         });

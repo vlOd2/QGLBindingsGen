@@ -13,6 +13,7 @@ internal static partial class CParser
     {
         string allLines = string.Join("\n", lines);
 
+        Console.WriteLine("Parsing constants");
         foreach (string line in lines)
         {
             CConstant cconst = CConstant.Parse(line);
@@ -26,6 +27,7 @@ internal static partial class CParser
                 ctx.Definitions.Add(def);
         }
 
+        Console.WriteLine("Parsing constants");
         string[] structNames = CStruct.ParseAllNames(allLines);
         ctx.Definitions.AddRange(structNames.Select(name => new CDefinition(name, null)));
 
