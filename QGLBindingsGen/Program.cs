@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using QGLBindingsGen.CParsing;
+using QGLBindingsGen.GLRegistry;
 
 namespace QGLBindingsGen;
 
@@ -94,7 +95,7 @@ public static class Program
         return ctx;
     }
 
-    public static void Main()
+    public static void JSONDump()
     {
         JsonSerializerOptions serializerOptions = new() { WriteIndented = true };
 
@@ -109,5 +110,9 @@ public static class Program
             string path = feature.IsExtension ? Path.Combine("dump", "gl", "ext", fileName) : Path.Combine("dump", "gl", fileName);
             File.WriteAllText(path, JsonSerializer.Serialize(feature.ParserContext.GetDump(), serializerOptions));
         }
+    }
+
+    public static void Main()
+    {
     }
 }

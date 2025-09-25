@@ -1,6 +1,6 @@
 ﻿using QGLBindingsGen.CParsing;
 
-namespace QGLBindingsGen;
+namespace QGLBindingsGen.GLRegistry;
 
 internal class GLFeature
 {

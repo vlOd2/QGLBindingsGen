@@ -2,7 +2,7 @@
 using System.Xml;
 using QGLBindingsGen.CParsing;
 
-namespace QGLBindingsGen;
+namespace QGLBindingsGen.GLRegistry;
 
 internal static class GLRegistryParser
 {
