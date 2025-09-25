@@ -1,5 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
 using QGLBindingsGen.CParsing;
 
 namespace QGLBindingsGen;
@@ -106,10 +109,12 @@ public static class Program
 
     public static void Main()
     {
-        string[] glfw = GetOrCacheHeader("glfw3.h", GLFW_HEADER_URL);
-        CParserContext ctx = new(["GLFWAPI"]);
-        CParser.ParseFile(glfw, ctx);
-        File.WriteAllText("glfw3.json", JsonSerializer.Serialize(
-            DumpContext(ctx), new JsonSerializerOptions() { WriteIndented = true }));
+        // string[] glfw = GetOrCacheHeader("glfw3.h", GLFW_HEADER_URL);
+        // CParserContext ctx = new(["GLFWAPI"]);
+        // CParser.ParseFile(glfw, ctx);
+        // File.WriteAllText("glfw3.json", JsonSerializer.Serialize(
+        //     DumpContext(ctx), new JsonSerializerOptions() { WriteIndented = true }));
+        string[] glRegistry = GetOrCacheHeader("gl.xml", GL_REGISTRY_URL);
+        XDocument doc = XDocument.Parse(string.Join("\n", glRegistry));
     }
 }
