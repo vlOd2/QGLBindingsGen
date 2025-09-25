@@ -29,6 +29,8 @@ internal static class GLRegistryParser
                 string name = enm.GetAttribute("name").Trim();
                 string value = enm.GetAttribute("value").Trim();
                 CType type = CTypeConverter.GetMacroLiteralType(value);
+                if (type == null)
+                    continue;
                 allEnums.Add(new CConstant(name, value, type));
             }
         }

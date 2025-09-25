@@ -45,7 +45,7 @@ internal partial class CTypeConverter
                 return new("long");
             if (ulong.TryParse(val, NumberStyles.HexNumber, null, out _))
                 return new("ulong");
-            throw new ArgumentException($"Invalid hex macro value ({val})");
+            return null;
         }
 
         if (int.TryParse(val, out _))
@@ -59,7 +59,7 @@ internal partial class CTypeConverter
         if (float.TryParse(val, out _))
             return new("float");
 
-        throw new ArgumentException($"Invalid macro value ({val})");
+        return null;
     }
 
     private static string SanitizeName(string name)
