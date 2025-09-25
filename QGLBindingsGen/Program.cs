@@ -1,10 +1,15 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using QGLBindingsGen.CParsing;
 
 namespace QGLBindingsGen;
 
-public partial class Program
+public static class Program
 {
+    private const string GLFW_HEADER_URL = "https://raw.githubusercontent.com/glfw/glfw/refs/heads/master/include/GLFW/glfw3.h";
+    private const string GL_REGISTRY_URL = "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Registry/refs/heads/main/xml/gl.xml";
+    private const string AL_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/al.h";
+
     private static Dictionary<string, object> DumpContext(CParserContext ctx)
     {
         Dictionary<string, object> dump = [];
@@ -64,36 +69,47 @@ public partial class Program
         return dump;
     }
 
-    private static void DumpHeader(string name, CParserContext ctx)
+    private static void __OpenAL()
     {
-        Console.WriteLine($"- Dumping header {name}.h");
-        CParser.ParseFile(File.ReadAllLines($"{name}.h"), ctx);
-        using FileStream dumpStream = File.Open($"{name}-dump.json", FileMode.Create);
-        JsonSerializer.Serialize(dumpStream, DumpContext(ctx), new JsonSerializerOptions()
-        {
-            WriteIndented = true
-        });
-        Console.WriteLine();
+        // CParserContext alCtx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API"]);
+        // alCtx.TypeMap.Add("ALboolean", "byte");
+        // alCtx.TypeMap.Add("ALchar", "byte");
+        // alCtx.TypeMap.Add("ALbyte", "sbyte");
+        // alCtx.TypeMap.Add("ALubyte", "byte");
+        // alCtx.TypeMap.Add("ALshort", "short");
+        // alCtx.TypeMap.Add("ALushort", "ushort");
+        // alCtx.TypeMap.Add("ALint", "int");
+        // alCtx.TypeMap.Add("ALuint", "uint");
+        // alCtx.TypeMap.Add("ALsizei", "int");
+        // alCtx.TypeMap.Add("ALenum", "int");
+        // alCtx.TypeMap.Add("ALfloat", "float");
+        // alCtx.TypeMap.Add("ALdouble", "double");
+        // alCtx.TypeMap.Add("ALvoid", "void");
     }
 
-    static void Main()
+    private static string[] GetOrCacheHeader(string fileName, string url)
     {
-        CParserContext alCtx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API"]);
-        alCtx.TypeMap.Add("ALboolean", "byte");
-        alCtx.TypeMap.Add("ALchar", "byte");
-        alCtx.TypeMap.Add("ALbyte", "sbyte");
-        alCtx.TypeMap.Add("ALubyte", "byte");
-        alCtx.TypeMap.Add("ALshort", "short");
-        alCtx.TypeMap.Add("ALushort", "ushort");
-        alCtx.TypeMap.Add("ALint", "int");
-        alCtx.TypeMap.Add("ALuint", "uint");
-        alCtx.TypeMap.Add("ALsizei", "int");
-        alCtx.TypeMap.Add("ALenum", "int");
-        alCtx.TypeMap.Add("ALfloat", "float");
-        alCtx.TypeMap.Add("ALdouble", "double");
-        alCtx.TypeMap.Add("ALvoid", "void");
-        DumpHeader("glfw3", new(["GLFWAPI"]));
-        DumpHeader("al", alCtx);
-        DumpHeader("libui", new(["_UI_EXTERN"]));
+        List<string> lines;
+        if (!File.Exists(fileName))
+        {
+            StringReader reader = new(new HttpClient().GetStringAsync(url).GetAwaiter().GetResult());
+            lines = [];
+            string line;
+            while ((line = reader.ReadLine()) != null)
+                lines.Add(line);
+            File.WriteAllLines(fileName, lines);
+        }
+        else
+            lines = [.. File.ReadAllLines(fileName)];
+        return [.. lines];
+    }
+
+    public static void Main()
+    {
+        string[] glfw = GetOrCacheHeader("glfw3.h", GLFW_HEADER_URL);
+        CParserContext ctx = new(["GLFWAPI"]);
+        CParser.ParseFile(glfw, ctx);
+        File.WriteAllText("glfw3.json", JsonSerializer.Serialize(
+            DumpContext(ctx), new JsonSerializerOptions() { WriteIndented = true }));
     }
 }
