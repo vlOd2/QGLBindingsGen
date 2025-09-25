@@ -109,12 +109,55 @@ public static class Program
 
     public static void Main()
     {
+        JsonSerializerOptions serializerOptions = new() { WriteIndented = true };
+
         // string[] glfw = GetOrCacheHeader("glfw3.h", GLFW_HEADER_URL);
         // CParserContext ctx = new(["GLFWAPI"]);
         // CParser.ParseFile(glfw, ctx);
         // File.WriteAllText("glfw3.json", JsonSerializer.Serialize(
         //     DumpContext(ctx), new JsonSerializerOptions() { WriteIndented = true }));
+
+        CParserContext ctx = new();
+        ctx.TypeMap.Add("GLenum", "uint");
+        ctx.TypeMap.Add("GLboolean", "bool");
+        ctx.TypeMap.Add("GLbitfield", "uint");
+        ctx.TypeMap.Add("GLvoid", "void");
+        ctx.TypeMap.Add("GLbyte", "sbyte");
+        ctx.TypeMap.Add("GLubyte", "byte");
+        ctx.TypeMap.Add("GLshort", "short");
+        ctx.TypeMap.Add("GLushort", "ushort");
+        ctx.TypeMap.Add("GLint", "int");
+        ctx.TypeMap.Add("GLuint", "uint");
+        ctx.TypeMap.Add("GLclampx", "int");
+        ctx.TypeMap.Add("GLsizei", "int");
+        ctx.TypeMap.Add("GLfloat", "float");
+        ctx.TypeMap.Add("GLclampf", "float");
+        ctx.TypeMap.Add("GLdouble", "double");
+        ctx.TypeMap.Add("GLclampd", "double");
+        ctx.TypeMap.Add("GLchar", "byte");
+        ctx.TypeMap.Add("GLcharARB", "byte");
+        ctx.TypeMap.Add("GLhalf", "ushort");
+        ctx.TypeMap.Add("GLhalfARB", "ushort");
+        ctx.TypeMap.Add("GLfixed", "int");
+        ctx.TypeMap.Add("GLintptr", "nint");
+        ctx.TypeMap.Add("GLintptrARB", "nint");
+        ctx.TypeMap.Add("GLsizeiptr", "nint");
+        ctx.TypeMap.Add("GLsizeiptrARB", "nint");
+        ctx.TypeMap.Add("GLint64", "long");
+        ctx.TypeMap.Add("GLint64EXT", "long");
+        ctx.TypeMap.Add("GLuint64", "ulong");
+        ctx.TypeMap.Add("GLuint64EXT", "ulong");
+        ctx.TypeMap.Add("GLhalfNV", "ushort");
+        ctx.TypeMap.Add("GLsync", "nint");
+        ctx.TypeMap.Add("GLvdpauSurfaceNV", "nint");
+
         string[] glRegistry = GetOrCacheHeader("gl.xml", GL_REGISTRY_URL);
-        XDocument doc = XDocument.Parse(string.Join("\n", glRegistry));
+        List<GLFeature> features = GLRegistryParser.Parse(ctx, glRegistry, null, []);
+        
+        foreach (GLFeature feature in features)
+        {
+            string fileName = feature.Name.Replace('.', '_') + ".json";
+            File.WriteAllText(fileName, JsonSerializer.Serialize(DumpContext(feature.ParserContext), serializerOptions));
+        }
     }
 }

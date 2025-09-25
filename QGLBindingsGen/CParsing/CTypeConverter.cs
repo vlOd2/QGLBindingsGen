@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace QGLBindingsGen.CParsing;
 
@@ -30,19 +31,35 @@ internal partial class CTypeConverter
         "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while"
     ];
 
+    // doesn't handle octal numbers, but those are almost never used anyway
     public static CType GetMacroLiteralType(string val)
     {
+        if (val.StartsWith("0x"))
+        {
+            val = val[2..];
+            if (int.TryParse(val, NumberStyles.HexNumber, null, out _))
+                return new("int");
+            if (uint.TryParse(val, NumberStyles.HexNumber, null, out _))
+                return new("uint");
+            if (long.TryParse(val, NumberStyles.HexNumber, null, out _))
+                return new("long");
+            if (ulong.TryParse(val, NumberStyles.HexNumber, null, out _))
+                return new("ulong");
+            throw new ArgumentException($"Invalid hex macro value ({val})");
+        }
+
         if (int.TryParse(val, out _))
-            return new CType("int");
+            return new("int");
         if (uint.TryParse(val, out _))
-            return new CType("uint");
+            return new("uint");
         if (long.TryParse(val, out _))
-            return new CType("long");
+            return new("long");
         if (ulong.TryParse(val, out _))
-            return new CType("ulong");
+            return new("ulong");
         if (float.TryParse(val, out _))
-            return new CType("float");
-        return null;
+            return new("float");
+
+        throw new ArgumentException($"Invalid macro value ({val})");
     }
 
     private static string SanitizeName(string name)
