@@ -32,7 +32,6 @@ internal static partial class CParser
             lines.Add(line);
         }
 
-        Console.WriteLine("Parsing constants and opaque structs");
         foreach (string line in lines)
         {
             CConstant cconst = CConstant.Parse(line);
@@ -46,11 +45,9 @@ internal static partial class CParser
                 ctx.Definitions.Add(def);
         }
 
-        Console.WriteLine("Lazy parsing structs");
         string[] structNames = CStruct.ParseAllNames(lines);
         ctx.Definitions.AddRange(structNames.Select(name => new CDefinition(name, null)));
 
-        Console.WriteLine("Parsing callbacks");
         foreach (string line in lines)
         {
             CDefinition def = CDefinition.ParseCallback(ctx, line);
@@ -59,7 +56,6 @@ internal static partial class CParser
             ctx.Definitions.Add(def);
         }
 
-        Console.WriteLine("Parsing structs");
         ctx.Structs.AddRange(CStruct.ParseAll(ctx, lines));
         for (int i = ctx.Definitions.Count - 1; i >= 0; i--)
         {
@@ -70,7 +66,6 @@ internal static partial class CParser
             }
         }
 
-        Console.WriteLine("Parsing functions");
         foreach (string line in lines)
         {
             CFunction func = CFunction.Parse(ctx, line);

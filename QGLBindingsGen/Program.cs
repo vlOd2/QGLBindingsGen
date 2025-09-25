@@ -29,7 +29,7 @@ public static class Program
     private static CParserContext ParseGLFWHeader()
     {
         string[] header = GetOrCacheFile("glfw3.h", GLFW_HEADER_URL);
-        CParserContext ctx = new(["GLFWAPI"]);
+        CParserContext ctx = new(["GLFWAPI", "APIENTRY", "WINGDIAPI", "CALLBACK"]);
         CParser.ParseFile(header, ctx);
         return ctx;
     }
@@ -76,7 +76,7 @@ public static class Program
     private static CParserContext ParseALHeader()
     {
         string[] header = GetOrCacheFile("al.h", AL_HEADER_URL);
-        CParserContext ctx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API"]);
+        CParserContext ctx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API", "AL_CPLUSPLUS"]);
         ctx.TypeMap.Add("ALboolean", "byte");
         ctx.TypeMap.Add("ALchar", "byte");
         ctx.TypeMap.Add("ALbyte", "sbyte");

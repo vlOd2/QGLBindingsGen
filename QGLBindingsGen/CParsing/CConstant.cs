@@ -5,13 +5,14 @@ namespace QGLBindingsGen.CParsing;
 internal partial class CConstant
 {
     #region Patterns
-    [GeneratedRegex(@"#define ([a-zA-Z0-9_]+)\s+((?:0x[0-9]*)|(?:[\-0-9.]+)|(?:(?:\()?[a-zA-Z0-9| _]*(?:\))?))")]
+    [GeneratedRegex(@"#define ([a-zA-Z0-9_]+)\s+((?:0x[0-9a-zA-Z]*)|(?:[\-0-9.]+)|(?:(?:\()?[\-a-zA-Z0-9| _]*(?:\))?))")]
     private static partial Regex MacroPattern();
     #endregion
 
     public string Name;
     public string Value;
     public CType CType;
+    public bool IsExpression => CType == null;
 
     public CConstant(string name, string value, CType type)
     {
@@ -32,7 +33,7 @@ internal partial class CConstant
         CType type = CTypeConverter.GetMacroLiteralType(value);
 
         if (type == null)
-            return null;
+            return new CConstant(name, value, new CType("uint")); // I am hoping this is large enough for most
 
         return new CConstant(name, value, type);
     }
