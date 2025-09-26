@@ -124,15 +124,17 @@ internal static class GLRegistryParser
         foreach (XmlElement feature in root.GetElementsByTagName("feature"))
         {
             string name = feature.GetAttribute("name").Trim();
+            string api = feature.GetAttribute("api").Trim();
             if (allowedFeatures != null && !allowedFeatures.Contains(name))
                 continue;
             CParserContext ctx = GetFeature(baseCtx, feature, constants, functions);
-            features.Add(new GLFeature(name, false, false, ctx));
+            features.Add(new GLFeature(name, false, api.Contains("gles"), ctx));
         }
 
         foreach (XmlElement extension in root.GetElementsByTagName("extension"))
         {
             string name = extension.GetAttribute("name").Trim();
+
             if (allowedExt != null && !allowedExt.Contains(name))
             {
                 foreach (string pattern in allowedExt)
@@ -144,8 +146,12 @@ internal static class GLRegistryParser
                 }
                 continue;
             }
-        passed: CParserContext ctx = GetFeature(baseCtx, extension, constants, functions);
-            features.Add(new GLFeature(name, true, false, ctx));
+
+        passed:
+            string[] supportedAPI = extension.GetAttribute("supported").Trim().Split('|');
+            bool isEs = !supportedAPI.Contains("gl") && !supportedAPI.Contains("glcore");
+            CParserContext ctx = GetFeature(baseCtx, extension, constants, functions);
+            features.Add(new GLFeature(name, true, isEs, ctx));
         }
 
         return features;
