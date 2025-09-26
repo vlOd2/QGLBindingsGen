@@ -114,5 +114,8 @@ public static class Program
 
     public static void Main()
     {
+        CParserContext ctx = ParseGLFWHeader();
+        string data = Generator.Generate(ctx, "GLFW", "QuickGLNS.Bindings", "QuickGL.GetGLFWProcAddress");
+        File.WriteAllText("GLFW.cs", data);
     }
 }

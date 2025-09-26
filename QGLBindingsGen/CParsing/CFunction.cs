@@ -5,7 +5,7 @@ namespace QGLBindingsGen.CParsing;
 internal partial class CFunction
 {
     #region Patterns
-    [GeneratedRegex(@"([a-zA-Z0-9_ *]+) ([a-zA-Z0-9_]+)\((.*)\)\s*?;")]
+    [GeneratedRegex(@"^\s*([a-zA-Z0-9_ ]+\**?) ([a-zA-Z0-9_]+)\((.*)\)\s*?;")]
     private static partial Regex FuncPattern();
     #endregion
     public string Name;

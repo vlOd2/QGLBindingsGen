@@ -127,7 +127,7 @@ internal static class GLRegistryParser
             if (allowedFeatures != null && !allowedFeatures.Contains(name))
                 continue;
             CParserContext ctx = GetFeature(baseCtx, feature, constants, functions);
-            features.Add(new GLFeature(name, false, ctx));
+            features.Add(new GLFeature(name, false, false, ctx));
         }
 
         foreach (XmlElement extension in root.GetElementsByTagName("extension"))
@@ -145,7 +145,7 @@ internal static class GLRegistryParser
                 continue;
             }
         passed: CParserContext ctx = GetFeature(baseCtx, extension, constants, functions);
-            features.Add(new GLFeature(name, true, ctx));
+            features.Add(new GLFeature(name, true, false, ctx));
         }
 
         return features;
