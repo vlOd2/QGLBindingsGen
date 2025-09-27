@@ -68,14 +68,10 @@ internal static partial class CParser
         {
             foreach (CStruct s in CStruct.ParseAll(ctx, lines))
                 ctx.Structs.Add(s);
-            for (int i = ctx.Definitions.Count - 1; i >= 0; i--)
-            {
-                if (structNames.Contains(ctx.Definitions[i].Name))
-                {
-                    ctx.Definitions.RemoveAt(i);
-                    i--;
-                }
-            }
+            List<CDefinition> defs = [.. ctx.Definitions.Where(def => !structNames.Contains(def.Name))];
+            ctx.Definitions.Clear();
+            foreach (CDefinition def in defs)
+                ctx.Definitions.Add(def);
         }));
 
         await ConsoleUtils.RunTask("Parsing functions", Parallel.ForEachAsync(lines, (line, _) =>

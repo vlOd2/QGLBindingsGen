@@ -89,15 +89,12 @@ internal static class GLRegistryParser
             await Parallel.ForEachAsync(require.GetElementsByTagName("enum").Cast<XmlElement>(), (enm, _) =>
             {
                 string name = enm.GetAttribute("name").Trim();
-                lock (enums)
+                foreach (CConstant c in enums)
                 {
-                    foreach (CConstant c in enums)
+                    if (c.Name == name)
                     {
-                        if (c.Name == name)
-                        {
-                            ctx.Constants.Add(c);
-                            break;
-                        }
+                        ctx.Constants.Add(c);
+                        break;
                     }
                 }
                 return new();
@@ -106,15 +103,12 @@ internal static class GLRegistryParser
             await Parallel.ForEachAsync(require.GetElementsByTagName("command").Cast<XmlElement>(), (cmd, _) =>
             {
                 string name = cmd.GetAttribute("name").Trim();
-                lock (commands)
+                foreach (CFunction f in commands)
                 {
-                    foreach (CFunction f in commands)
+                    if (f.Name == name)
                     {
-                        if (f.Name == name)
-                        {
-                            ctx.Functions.Add(f);
-                            break;
-                        }
+                        ctx.Functions.Add(f);
+                        break;
                     }
                 }
                 return new();

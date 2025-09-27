@@ -8,8 +8,4 @@
 	<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
-  </ItemGroup>
-
 </Project>

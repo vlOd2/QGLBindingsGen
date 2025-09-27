@@ -1,7 +1,4 @@
-﻿using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
-using QGLBindingsGen.CParsing;
+﻿using QGLBindingsGen.CParsing;
 using QGLBindingsGen.GLRegistry;
 
 namespace QGLBindingsGen;
