@@ -98,7 +98,6 @@ public static class Program
 
     private static async Task MainAsync()
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
         Directory.CreateDirectory(OUT_DIR);
 
         Console.WriteLine("- Generating bindings for GLFW");
@@ -120,5 +119,16 @@ public static class Program
         });
     }
 
-    public static void Main() => MainAsync().GetAwaiter().GetResult();
+    public static void Main()
+    {
+        try
+        {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            MainAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            ConsoleUtils.WriteError(ex);
+        }
+    }
 }

@@ -99,9 +99,8 @@ internal static class ConsoleUtils
         {
             await task;
         }
-        catch (Exception ex)
+        catch
         {
-            WriteError(ex);
             throw;
         }
     }
@@ -113,9 +112,8 @@ internal static class ConsoleUtils
         {
             return await task;
         }
-        catch (Exception ex)
+        catch
         {
-            WriteError(ex);
             throw;
         }
     }
