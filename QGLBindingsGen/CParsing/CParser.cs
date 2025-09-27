@@ -38,11 +38,13 @@ internal static partial class CParser
             CConstant cconst = CConstant.Parse(line);
             if (cconst != null)
             {
+                if (!ctx.CheckSymbol(cconst.Name))
+                    return new();
                 ctx.Constants.Add(cconst);
                 return new();
             }
             CDefinition def = CDefinition.ParseOpaqueStruct(line);
-            if (def != null)
+            if (def != null && ctx.CheckSymbol(def.Name))
                 ctx.Definitions.Add(def);
             return new();
         }));
@@ -51,14 +53,18 @@ internal static partial class CParser
         {
             string[] structNames = CStruct.ParseAllNames(lines);
             foreach (CDefinition def in structNames.Select(name => new CDefinition(name, null)))
+            {
+                if (!ctx.CheckSymbol(def.Name))
+                    continue;
                 ctx.Definitions.Add(def);
+            }
             return structNames;
         }));
 
         await TaskRunner.Run("Parsing callbacks", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CDefinition def = CDefinition.ParseCallback(ctx, line);
-            if (def == null)
+            if (def == null || !ctx.CheckSymbol(def.Name))
                 return new();
             ctx.Definitions.Add(def);
             return new();
@@ -66,18 +72,29 @@ internal static partial class CParser
 
         await TaskRunner.Run("Parsing structs", Task.Run(() =>
         {
-            foreach (CStruct s in CStruct.ParseAll(ctx, lines))
-                ctx.Structs.Add(s);
-            List<CDefinition> defs = [.. ctx.Definitions.Where(def => !structNames.Contains(def.Name))];
+            List<CDefinition> defs = [.. ctx.Definitions];
             ctx.Definitions.Clear();
             foreach (CDefinition def in defs)
+            {
+                if (structNames.Contains(def.Name))
+                {
+                    ctx.RemoveSymbol(def.Name);
+                    continue;
+                }
                 ctx.Definitions.Add(def);
+            }
+            foreach (CStruct s in CStruct.ParseAll(ctx, lines))
+            {
+                if (!ctx.CheckSymbol(s.Name))
+                    continue;
+                ctx.Structs.Add(s);
+            }
         }));
 
         await TaskRunner.Run("Parsing functions", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CFunction func = CFunction.Parse(ctx, line);
-            if (func == null)
+            if (func == null || !ctx.CheckSymbol(func.Name))
                 return new();
             ctx.Functions.Add(func);
             return new();

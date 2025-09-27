@@ -32,7 +32,7 @@ internal static class Generator
 
     private static void AppendFuncWrapper(CFunction func, StringBuilder builder)
     {
-        builder.Append($"    public static void {func.ReturnType} {func.Name}(");
+        builder.Append($"    public static {func.ReturnType} {func.Name}(");
         builder.Append(string.Join(", ", func.Args.Select(p => $"{p.Value} {p.Key}")));
         builder.Append(") { ");
 
@@ -161,7 +161,7 @@ internal static class Generator
 
         GenerateFileHeader(builder, @namespace);
         builder.AppendLine();
-        if (feature.ParserContext.Structs.Count > 0 || feature.ParserContext.Definitions.Count > 0)
+        if (!feature.ParserContext.Structs.IsEmpty || !feature.ParserContext.Definitions.IsEmpty)
         {
             GenerateOtherTypes(feature.ParserContext, builder);
             builder.AppendLine();
@@ -177,6 +177,35 @@ internal static class Generator
         builder.AppendLine();
         builder.Append($"    internal static QGLFeature FeatureInfo => ");
         builder.AppendLine($"new(\"{feature.Name}\", {(feature.IsExtension ? "true" : "false")}, {(feature.IsES ? "true" : "false")});");
+        builder.AppendLine("}");
+
+        return builder.ToString();
+    }
+
+    public static string GenerateGLBindingsMgr(List<GLFeature> features, string @namespace)
+    {
+        StringBuilder builder = new();
+
+        GenerateFileHeader(builder, @namespace);
+        builder.AppendLine();
+
+        builder.AppendLine($"public static unsafe class GLBindingsManager");
+        builder.AppendLine("{");
+        builder.AppendLine("    internal static void Load()");
+        builder.AppendLine("    {");
+        foreach (GLFeature feature in features)
+        {
+            string className = GetGLFeatureClassName(feature);
+            builder.AppendLine($"        if (QuickGL.IsFeatureSupported({className}.FeatureInfo)) {className}.Load();");
+        }
+        builder.AppendLine("    }");
+        builder.AppendLine();
+
+        builder.AppendLine("    internal static void Unload()");
+        builder.AppendLine("    {");
+        foreach (GLFeature feature in features)
+            builder.AppendLine($"        {GetGLFeatureClassName(feature)}.Unload();");
+        builder.AppendLine("    }");
         builder.AppendLine("}");
 
         return builder.ToString();

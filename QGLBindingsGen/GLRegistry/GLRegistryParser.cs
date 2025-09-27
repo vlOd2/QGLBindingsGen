@@ -93,7 +93,8 @@ internal static class GLRegistryParser
                 {
                     if (c.Name == name)
                     {
-                        ctx.Constants.Add(c);
+                        if (ctx.CheckSymbol(c.Name))
+                            ctx.Constants.Add(c);
                         break;
                     }
                 }
@@ -107,7 +108,8 @@ internal static class GLRegistryParser
                 {
                     if (f.Name == name)
                     {
-                        ctx.Functions.Add(f);
+                        if (ctx.CheckSymbol(f.Name))
+                            ctx.Functions.Add(f);
                         break;
                     }
                 }

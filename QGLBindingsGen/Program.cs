@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Xml.Linq;
 using QGLBindingsGen.CParsing;
 using QGLBindingsGen.GLRegistry;
 
@@ -140,12 +141,15 @@ public static class Program
             Directory.CreateDirectory(Path.Combine(OUT_DIR, "Extensions"));
         await Parallel.ForEachAsync(features, async (feature, token) =>
         {
-            string classData = Generator.GenerateGLFeature(feature, BINDINGS_NAMESPACE);
+            string classData = Generator.GenerateGLFeature(feature, feature.IsExtension ? $"{BINDINGS_NAMESPACE}.Extensions" : BINDINGS_NAMESPACE);
             string outDir = OUT_DIR;
             if (feature.IsExtension)
                 outDir = Path.Combine(OUT_DIR, "Extensions");
             await File.WriteAllTextAsync(Path.Combine(outDir, $"{Generator.GetGLFeatureClassName(feature)}.cs"), classData, token);
         });
+
+        Logger.Info("Generating OpenGL bindings manager");
+        await File.WriteAllTextAsync(Path.Combine(OUT_DIR, "GLBindingsManager.cs"), Generator.GenerateGLBindingsMgr(features, BINDINGS_NAMESPACE));
 
         Logger.Info("Done! Bindings generated successfully");
     }

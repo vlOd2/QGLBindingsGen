@@ -12,6 +12,7 @@ internal class CParserContext
     public readonly ConcurrentBag<CStruct> Structs = [];
     public readonly ConcurrentBag<string> UnknownTypes = [];
     public readonly ConcurrentBag<CFunction> Functions = [];
+    private readonly List<string> declaredSymbols = [];
 
     public CParserContext(List<string> removeWords = null)
     {
@@ -19,4 +20,20 @@ internal class CParserContext
         if (removeWords != null)
             RemoveWords.AddRange(removeWords);
     }
+
+    public bool CheckSymbol(string name)
+    {
+        lock (declaredSymbols)
+        {
+            if (declaredSymbols.Contains(name))
+            {
+                Logger.Warn($"Symbol \"{name}\" is already declared");
+                return false;
+            }
+            declaredSymbols.Add(name);
+            return true;
+        }
+    }
+
+    public void RemoveSymbol(string name) => declaredSymbols.Remove(name);
 }
