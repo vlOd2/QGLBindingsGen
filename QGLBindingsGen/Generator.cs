@@ -176,7 +176,7 @@ internal static class Generator
         GenerateFunctionWrappers(feature.ParserContext, builder);
         builder.AppendLine();
         builder.Append($"    internal static QGLFeature FeatureInfo => ");
-        builder.AppendLine($"new(\"{feature.Name}\", {feature.IsExtension}, {feature.IsES});");
+        builder.AppendLine($"new(\"{feature.Name}\", {(feature.IsExtension ? "true" : "false")}, {(feature.IsES ? "true" : "false")});");
         builder.AppendLine("}");
 
         return builder.ToString();

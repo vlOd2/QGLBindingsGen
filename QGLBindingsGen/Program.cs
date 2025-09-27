@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.IO;
+using System.Text.Json;
+using System.Threading.Tasks;
 using QGLBindingsGen.CParsing;
 using QGLBindingsGen.GLRegistry;
 
@@ -6,38 +8,40 @@ namespace QGLBindingsGen;
 
 public static class Program
 {
+    private const string OUT_DIR = "BindingsOutput";
+    private const string BINDINGS_NAMESPACE = "QuickGLNS.Bindings";
     private const string GLFW_HEADER_URL = "https://raw.githubusercontent.com/glfw/glfw/refs/heads/master/include/GLFW/glfw3.h";
     private const string GL_REGISTRY_URL = "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Registry/refs/heads/main/xml/gl.xml";
     private const string AL_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/al.h";
 
-    private static string[] GetOrCacheFile(string fileName, string url)
+    private static async Task<string[]> GetOrCacheFile(string fileName, string url)
     {
         List<string> lines;
         if (!File.Exists(fileName))
         {
-            StringReader reader = new(new HttpClient().GetStringAsync(url).GetAwaiter().GetResult());
+            StringReader reader = new(await new HttpClient().GetStringAsync(url));
             lines = [];
             string line;
-            while ((line = reader.ReadLine()) != null)
+            while ((line = await reader.ReadLineAsync()) != null)
                 lines.Add(line);
-            File.WriteAllLines(fileName, lines);
+            await File.WriteAllLinesAsync(fileName, lines);
         }
         else
-            lines = [.. File.ReadAllLines(fileName)];
+            lines = [.. await File.ReadAllLinesAsync(fileName)];
         return [.. lines];
     }
 
-    private static CParserContext ParseGLFWHeader()
+    private static async Task<CParserContext> ParseGLFWHeader()
     {
-        string[] header = GetOrCacheFile("glfw3.h", GLFW_HEADER_URL);
+        string[] header = await ConsoleUtils.RunTask("Downloading GLFW header", GetOrCacheFile("glfw3.h", GLFW_HEADER_URL));
         CParserContext ctx = new(["GLFWAPI", "APIENTRY", "WINGDIAPI", "CALLBACK"]);
-        CParser.ParseFile(header, ctx);
+        await CParser.ParseFile(header, ctx);
         return ctx;
     }
 
-    private static List<GLFeature> ParseGLRegistry(List<string> allowedFeatures, List<string> allowedExt)
+    private static async Task<List<GLFeature>> ParseGLRegistry(List<string> allowedFeatures, List<string> allowedExt)
     {
-        string[] registry = GetOrCacheFile("gl.xml", GL_REGISTRY_URL);
+        string[] registry = await GetOrCacheFile("gl.xml", GL_REGISTRY_URL);
         CParserContext baseCtx = new();
         baseCtx.TypeMap.Add("GLenum", "uint");
         baseCtx.TypeMap.Add("GLboolean", "bool");
@@ -71,12 +75,12 @@ public static class Program
         baseCtx.TypeMap.Add("GLhalfNV", "ushort");
         baseCtx.TypeMap.Add("GLsync", "nint");
         baseCtx.TypeMap.Add("GLvdpauSurfaceNV", "nint");
-        return GLRegistryParser.Parse(baseCtx, registry, allowedFeatures, allowedExt);
+        return await GLRegistryParser.Parse(baseCtx, registry, allowedFeatures, allowedExt);
     }
 
-    private static CParserContext ParseALHeader()
+    private static async Task<CParserContext> ParseALHeader()
     {
-        string[] header = GetOrCacheFile("al.h", AL_HEADER_URL);
+        string[] header = await GetOrCacheFile("al.h", AL_HEADER_URL);
         CParserContext ctx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API", "AL_CPLUSPLUS"]);
         ctx.TypeMap.Add("ALboolean", "byte");
         ctx.TypeMap.Add("ALchar", "byte");
@@ -91,31 +95,33 @@ public static class Program
         ctx.TypeMap.Add("ALfloat", "float");
         ctx.TypeMap.Add("ALdouble", "double");
         ctx.TypeMap.Add("ALvoid", "void");
-        CParser.ParseFile(header, ctx);
+        await CParser.ParseFile(header, ctx);
         return ctx;
     }
 
-    public static void JSONDump()
+    private static async Task MainAsync()
     {
-        JsonSerializerOptions serializerOptions = new() { WriteIndented = true };
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Directory.CreateDirectory(OUT_DIR);
 
-        Directory.CreateDirectory(Path.Combine("dump", "gl", "ext"));
-        File.WriteAllText(Path.Combine("dump", "glfw.json"), JsonSerializer.Serialize(ParseGLFWHeader().GetDump(), serializerOptions));
-        File.WriteAllText(Path.Combine("dump", "al.json"), JsonSerializer.Serialize(ParseALHeader().GetDump(), serializerOptions));
+        Console.WriteLine("- Generating bindings for GLFW");
+        await File.WriteAllTextAsync(Path.Combine(OUT_DIR, "GLFW.cs"), 
+            Generator.Generate(await ParseGLFWHeader(), "GLFW", BINDINGS_NAMESPACE, "QuickGL.GetGLFWProcAddress"));
 
-        List<GLFeature> glFeatures = ParseGLRegistry(null, null);
-        foreach (GLFeature feature in glFeatures)
+        Console.WriteLine("- Generating bindings for OpenGL");
+        List<GLFeature> features = await ParseGLRegistry(null, [@"@/GL_ARB_.*"]);
+        if (features.Any(feature => feature.IsExtension))
+            Directory.CreateDirectory(Path.Combine(OUT_DIR, "Extensions"));
+
+        await Parallel.ForEachAsync(features, async (feature, token) =>
         {
-            string fileName = $"{feature.Name.Replace(".", "_").Trim()}.json";
-            string path = feature.IsExtension ? Path.Combine("dump", "gl", "ext", fileName) : Path.Combine("dump", "gl", fileName);
-            File.WriteAllText(path, JsonSerializer.Serialize(feature.ParserContext.GetDump(), serializerOptions));
-        }
+            string classData = Generator.GenerateGLFeature(feature, BINDINGS_NAMESPACE);
+            string outDir = OUT_DIR;
+            if (feature.IsExtension)
+                outDir = Path.Combine(OUT_DIR, "Extensions");
+            await File.WriteAllTextAsync(Path.Combine(outDir, $"{Generator.GetGLFeatureClassName(feature)}.cs"), classData, token);
+        });
     }
 
-    public static void Main()
-    {
-        CParserContext ctx = ParseGLFWHeader();
-        string data = Generator.Generate(ctx, "GLFW", "QuickGLNS.Bindings", "QuickGL.GetGLFWProcAddress");
-        File.WriteAllText("GLFW.cs", data);
-    }
+    public static void Main() => MainAsync().GetAwaiter().GetResult();
 }

@@ -9,18 +9,18 @@ internal static partial class CParser
     public static partial Regex ArgsPattern();
     #endregion
 
-    public static void ParseFile(string[] rawLines, CParserContext ctx)
+    public static async Task ParseFile(string[] rawLines, CParserContext ctx)
     {
         List<string> lines = [];
 
-        foreach (string rawLine in rawLines)
+        await ConsoleUtils.RunTask("Preparing file", Parallel.ForEachAsync(rawLines, (rawLine, _) =>
         {
             string line = rawLine.Trim();
 
             if (string.IsNullOrWhiteSpace(line))
-                continue;
+                return new();
             if (line.StartsWith("//") || (line.StartsWith("/*") && line.EndsWith("*/")))
-                continue;
+                return new();
 
             foreach (string word in ctx.RemoveWords)
             {
@@ -30,48 +30,61 @@ internal static partial class CParser
             }
 
             lines.Add(line);
-        }
+            return new();
+        }));
 
-        foreach (string line in lines)
+        await ConsoleUtils.RunTask("Parsing constants and opaque structs", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CConstant cconst = CConstant.Parse(line);
             if (cconst != null)
             {
                 ctx.Constants.Add(cconst);
-                continue;
+                return new();
             }
             CDefinition def = CDefinition.ParseOpaqueStruct(line);
             if (def != null)
                 ctx.Definitions.Add(def);
-        }
+            return new();
+        }));
 
-        string[] structNames = CStruct.ParseAllNames(lines);
-        ctx.Definitions.AddRange(structNames.Select(name => new CDefinition(name, null)));
+        string[] structNames = await ConsoleUtils.RunTask("Parsing structs (lazy)", Task.Run(() =>
+        {
+            string[] structNames = CStruct.ParseAllNames(lines);
+            foreach (CDefinition def in structNames.Select(name => new CDefinition(name, null)))
+                ctx.Definitions.Add(def);
+            return structNames;
+        }));
 
-        foreach (string line in lines)
+        await ConsoleUtils.RunTask("Parsing callbacks", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CDefinition def = CDefinition.ParseCallback(ctx, line);
             if (def == null)
-                continue;
+                return new();
             ctx.Definitions.Add(def);
-        }
+            return new();
+        }));
 
-        ctx.Structs.AddRange(CStruct.ParseAll(ctx, lines));
-        for (int i = ctx.Definitions.Count - 1; i >= 0; i--)
+        await ConsoleUtils.RunTask("Parsing structs", Task.Run(() =>
         {
-            if (structNames.Contains(ctx.Definitions[i].Name))
+            foreach (CStruct s in CStruct.ParseAll(ctx, lines))
+                ctx.Structs.Add(s);
+            for (int i = ctx.Definitions.Count - 1; i >= 0; i--)
             {
-                ctx.Definitions.RemoveAt(i);
-                i--;
+                if (structNames.Contains(ctx.Definitions[i].Name))
+                {
+                    ctx.Definitions.RemoveAt(i);
+                    i--;
+                }
             }
-        }
+        }));
 
-        foreach (string line in lines)
+        await ConsoleUtils.RunTask("Parsing functions", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CFunction func = CFunction.Parse(ctx, line);
             if (func == null)
-                continue;
+                return new();
             ctx.Functions.Add(func);
-        }
+            return new();
+        }));
     }
 }

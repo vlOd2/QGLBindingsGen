@@ -82,9 +82,7 @@ internal partial class CStruct
     public static string[] ParseAllNames(List<string> lines) 
     {
         List<string> names = [];
-
         SearchStructs(lines, match => names.Add(match.Groups[1].Value.Trim()));
-
         return [..names];
     }
 

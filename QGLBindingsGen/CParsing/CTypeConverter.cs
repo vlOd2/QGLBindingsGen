@@ -101,21 +101,27 @@ internal partial class CTypeConverter
         }
 
         string convertedType = null;
-        foreach (CDefinition def in ctx.Definitions)
+        lock (ctx.Definitions)
         {
-            if (cType == def.Name)
+            foreach (CDefinition def in ctx.Definitions)
             {
-                convertedType = cType;
-                break;
+                if (cType == def.Name)
+                {
+                    convertedType = cType;
+                    break;
+                }
             }
         }
 
-        foreach (CStruct s in ctx.Structs)
+        lock (ctx.Structs)
         {
-            if (cType == s.Name)
+            foreach (CStruct s in ctx.Structs)
             {
-                convertedType = cType;
-                break;
+                if (cType == s.Name)
+                {
+                    convertedType = cType;
+                    break;
+                }
             }
         }
 
