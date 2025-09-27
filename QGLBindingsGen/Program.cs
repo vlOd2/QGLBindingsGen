@@ -135,7 +135,7 @@ public static class Program
         await GenerateHeader("ALC", await ParseALCHeader(), "QuickGL.GetALProcAddress");
 
         Logger.Info("Generating bindings for OpenGL");
-        List<GLFeature> features = await ParseGLRegistry(null, []);
+        List<GLFeature> features = await ParseGLRegistry(null, ["@/GL_ARB_.*", "@/GL_EXT_.*"]);
         if (features.Any(feature => feature.IsExtension))
             Directory.CreateDirectory(Path.Combine(OUT_DIR, "Extensions"));
         await Parallel.ForEachAsync(features, async (feature, token) =>
@@ -157,11 +157,14 @@ public static class Program
             MainAsync().GetAwaiter().GetResult();
             
             Logger.Info("Task timings:");
+            double totalTime = 0;
             foreach (KeyValuePair<string, (long, long)> timing in TaskRunner.TaskTimings)
             {
                 TimeSpan time = Stopwatch.GetElapsedTime(timing.Value.Item1, timing.Value.Item2);
+                totalTime += time.TotalMilliseconds;
                 Logger.Info($"- {timing.Key}: {time.TotalMilliseconds:F2} ms");
             }
+            Logger.Info($"Total time: {totalTime:F2} ms");
         }
         catch (Exception ex)
         {
