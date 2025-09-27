@@ -28,8 +28,8 @@ internal static class GLRegistryParser
             await Parallel.ForEachAsync(enums.GetElementsByTagName("enum").Cast<XmlElement>(), (enm, _) =>
             {
                 string name = enm.GetAttribute("name").Trim();
-                string value = enm.GetAttribute("value").Trim();
-                CType type = CTypeConverter.GetMacroLiteralType(value);
+                string rawValue = enm.GetAttribute("value").Trim();
+                (CType type, string value) = CTypeConverter.ProcessConstant(rawValue);
                 if (type == null)
                     return new();
                 allEnums.Add(new CConstant(name, value, type));

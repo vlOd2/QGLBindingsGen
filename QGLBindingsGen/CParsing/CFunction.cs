@@ -16,14 +16,14 @@ internal partial class CFunction
     {
         Name = name;
 
-        (ReturnType, _) = ctx.TypeConv.Convert(returnType, null);
+        (ReturnType, _) = ctx.TypeConv.Convert(returnType, null, false);
         Args = [];
 
         foreach (Match arg in CParser.ArgsPattern().Matches(args))
         {
             string rawType = arg.Groups[1].Value.Trim();
             string rawName = arg.Groups[2].Value.Trim();
-            (CType type, string aName) = ctx.TypeConv.Convert(rawType, rawName);
+            (CType type, string aName) = ctx.TypeConv.Convert(rawType, rawName, false);
             Args[aName] = type;
         }
     }

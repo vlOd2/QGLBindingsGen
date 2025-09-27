@@ -29,11 +29,11 @@ internal partial class CConstant
             return null;
 
         string name = match.Groups[1].Value.Trim();
-        string value = match.Groups[2].Value.Trim();
-        CType type = CTypeConverter.GetMacroLiteralType(value);
+        string rawValue = match.Groups[2].Value.Trim();
+        (CType type, string value) = CTypeConverter.ProcessConstant(rawValue);
 
         if (type == null)
-            return new CConstant(name, value, new CType("uint")); // I am hoping this is large enough for most
+            return new CConstant(name, rawValue, new CType("int")); // I am hoping this is large enough for most
 
         return new CConstant(name, value, type);
     }

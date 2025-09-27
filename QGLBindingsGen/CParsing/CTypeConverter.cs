@@ -32,34 +32,30 @@ internal partial class CTypeConverter
     ];
 
     // doesn't handle octal numbers, but those are almost never used anyway
-    public static CType GetMacroLiteralType(string val)
+    public static (CType type, string value) ProcessConstant(string s)
     {
-        if (val.StartsWith("0x"))
+        ulong value;
+
+        if (s.StartsWith("0x"))
         {
-            val = val[2..];
-            if (int.TryParse(val, NumberStyles.HexNumber, null, out _))
-                return new("int");
-            if (uint.TryParse(val, NumberStyles.HexNumber, null, out _))
-                return new("uint");
-            if (long.TryParse(val, NumberStyles.HexNumber, null, out _))
-                return new("long");
-            if (ulong.TryParse(val, NumberStyles.HexNumber, null, out _))
-                return new("ulong");
-            return null;
+            s = s[2..];
+            if (!ulong.TryParse(s, NumberStyles.HexNumber, null, out value))
+                return (null, null);
+        }
+        else if (!ulong.TryParse(s, null, out value))
+        {
+            if (float.TryParse(s, out _))
+                return (new("float"), s);
+            return (null, null);
         }
 
-        if (int.TryParse(val, out _))
-            return new("int");
-        if (uint.TryParse(val, out _))
-            return new("uint");
-        if (long.TryParse(val, out _))
-            return new("long");
-        if (ulong.TryParse(val, out _))
-            return new("ulong");
-        if (float.TryParse(val, out _))
-            return new("float");
-
-        return null;
+        if (value > 0x7FFFFFFF_FFFFFFFF)
+            return (new("ulong"), $"0x{value:X16}");
+        else if (value > 0xFFFFFFFF)
+            return (new("long"), $"0x{(long)value:X8}");
+        else if (value > 0x7FFFFFFF)
+            return (new("uint"), $"0x{(uint)value:X8}");
+        return (new("int"), $"0x{(int)value:X8}");
     }
 
     private static string SanitizeName(string name)
@@ -70,7 +66,7 @@ internal partial class CTypeConverter
         return name;
     }
 
-    public (CType, string) Convert(string cType, string argName)
+    public (CType, string) Convert(string cType, string argName, bool convertCallbacks)
     {
         cType = cType.Trim().Replace("const ", "");
         int ptrCount = cType.Where(c => c == '*').Count();
@@ -105,7 +101,10 @@ internal partial class CTypeConverter
         {
             if (cType == def.Name)
             {
-                convertedType = cType;
+                if (def.Callback != null && convertCallbacks)
+                    convertedType = "nint";
+                else
+                    convertedType = cType;
                 break;
             }
         }

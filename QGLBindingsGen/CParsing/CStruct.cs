@@ -44,7 +44,7 @@ internal partial class CStruct
 
             string rawType = match.Groups[1].Value.Trim();
             string rawName = match.Groups[2].Value.Trim();
-            (CType type, string name) = ctx.TypeConv.Convert(rawType, rawName);
+            (CType type, string name) = ctx.TypeConv.Convert(rawType, rawName, true);
             Fields[name] = type;
         }
     }
