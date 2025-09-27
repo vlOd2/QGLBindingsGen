@@ -166,7 +166,7 @@ internal static class Generator
 
         GenerateFileHeader(builder, @namespace);
         builder.AppendLine();
-        if (!feature.ParserContext.Structs.IsEmpty || !feature.ParserContext.Definitions.IsEmpty)
+        if (feature.ParserContext.Structs.Count > 0 || feature.ParserContext.Definitions.Count > 0)
         {
             GenerateOtherTypes(feature.ParserContext, builder);
             builder.AppendLine();

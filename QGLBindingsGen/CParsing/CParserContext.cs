@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace QGLBindingsGen.CParsing;
 
 internal class CParserContext
@@ -7,11 +5,11 @@ internal class CParserContext
     public CTypeConverter TypeConv { get; private set; }
     public readonly Dictionary<string, string> TypeMap = [];
     public readonly List<string> RemoveWords = [];
-    public readonly ConcurrentBag<CConstant> Constants = [];
-    public readonly ConcurrentBag<CDefinition> Definitions = [];
-    public readonly ConcurrentBag<CStruct> Structs = [];
-    public readonly ConcurrentBag<string> UnknownTypes = [];
-    public readonly ConcurrentBag<CFunction> Functions = [];
+    public readonly List<CConstant> Constants = [];
+    public readonly List<CDefinition> Definitions = [];
+    public readonly List<CStruct> Structs = [];
+    public readonly List<string> UnknownTypes = [];
+    public readonly List<CFunction> Functions = [];
     private readonly List<string> declaredSymbols = [];
 
     public CParserContext(List<string> removeWords = null)
@@ -23,16 +21,13 @@ internal class CParserContext
 
     public bool CheckSymbol(string name)
     {
-        lock (declaredSymbols)
+        if (declaredSymbols.Contains(name))
         {
-            if (declaredSymbols.Contains(name))
-            {
-                Logger.Warn($"Symbol \"{name}\" is already declared");
-                return false;
-            }
-            declaredSymbols.Add(name);
-            return true;
+            Logger.Warn($"Symbol \"{name}\" is already declared");
+            return false;
         }
+        declaredSymbols.Add(name);
+        return true;
     }
 
     public void RemoveSymbol(string name) => declaredSymbols.Remove(name);

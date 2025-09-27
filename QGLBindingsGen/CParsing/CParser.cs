@@ -9,18 +9,18 @@ internal static partial class CParser
     public static partial Regex ArgsPattern();
     #endregion
 
-    public static async Task ParseFile(string[] rawLines, CParserContext ctx)
+    private static async Task<List<string>> PrepareFile(string[] rawLines, CParserContext ctx) => await Task.Run(() =>
     {
         List<string> lines = [];
 
-        await TaskRunner.Run("Preparing file", Parallel.ForEachAsync(rawLines, (rawLine, _) =>
+        foreach (string rawLine in rawLines)
         {
             string line = rawLine.Trim();
 
             if (string.IsNullOrWhiteSpace(line))
-                return new();
+                continue;
             if (line.StartsWith("//") || (line.StartsWith("/*") && line.EndsWith("*/")))
-                return new();
+                continue;
 
             foreach (string word in ctx.RemoveWords)
             {
@@ -30,74 +30,93 @@ internal static partial class CParser
             }
 
             lines.Add(line);
-            return new();
-        }));
+        }
 
-        await TaskRunner.Run("Parsing constants and opaque structs", Parallel.ForEachAsync(lines, (line, _) =>
+        return lines;
+    });
+
+    private static async Task ParseConstants(List<string> lines, CParserContext ctx) => await Task.Run(() =>
+    {
+        foreach (string line in lines)
         {
             CConstant cconst = CConstant.Parse(line);
             if (cconst != null)
             {
                 if (!ctx.CheckSymbol(cconst.Name))
-                    return new();
+                    continue;
                 ctx.Constants.Add(cconst);
-                return new();
+                continue;
             }
             CDefinition def = CDefinition.ParseOpaqueStruct(line);
             if (def != null && ctx.CheckSymbol(def.Name))
                 ctx.Definitions.Add(def);
-            return new();
-        }));
+        }
+    });
 
-        string[] structNames = await TaskRunner.Run("Parsing structs (lazy)", Task.Run(() =>
+    private static async Task<string[]> ParseStructsLazy(List<string> lines, CParserContext ctx) => await Task.Run(() =>
+    {
+        string[] structNames = CStruct.ParseAllNames(lines);
+        foreach (CDefinition def in structNames.Select(name => new CDefinition(name, null)))
         {
-            string[] structNames = CStruct.ParseAllNames(lines);
-            foreach (CDefinition def in structNames.Select(name => new CDefinition(name, null)))
-            {
-                if (!ctx.CheckSymbol(def.Name))
-                    continue;
-                ctx.Definitions.Add(def);
-            }
-            return structNames;
-        }));
+            if (!ctx.CheckSymbol(def.Name))
+                continue;
+            ctx.Definitions.Add(def);
+        }
+        return structNames;
+    });
 
-        await TaskRunner.Run("Parsing callbacks", Parallel.ForEachAsync(lines, (line, _) =>
+    private static async Task ParseCallbacks(List<string> lines, CParserContext ctx) => await Task.Run(() =>
+    {
+        foreach (string line in lines)
         {
             CDefinition def = CDefinition.ParseCallback(ctx, line);
             if (def == null || !ctx.CheckSymbol(def.Name))
-                return new();
+                continue;
             ctx.Definitions.Add(def);
-            return new();
-        }));
+        }
+    });
 
-        await TaskRunner.Run("Parsing structs", Task.Run(() =>
+    private static async Task ParseStructs(List<string> lines, string[] structNames, CParserContext ctx) => await Task.Run(() => 
+    {
+        List<CDefinition> defs = [.. ctx.Definitions];
+        ctx.Definitions.Clear();
+
+        foreach (CDefinition def in defs)
         {
-            List<CDefinition> defs = [.. ctx.Definitions];
-            ctx.Definitions.Clear();
-            foreach (CDefinition def in defs)
+            if (structNames.Contains(def.Name))
             {
-                if (structNames.Contains(def.Name))
-                {
-                    ctx.RemoveSymbol(def.Name);
-                    continue;
-                }
-                ctx.Definitions.Add(def);
+                ctx.RemoveSymbol(def.Name);
+                continue;
             }
-            foreach (CStruct s in CStruct.ParseAll(ctx, lines))
-            {
-                if (!ctx.CheckSymbol(s.Name))
-                    continue;
-                ctx.Structs.Add(s);
-            }
-        }));
+            ctx.Definitions.Add(def);
+        }
 
-        await TaskRunner.Run("Parsing functions", Parallel.ForEachAsync(lines, (line, _) =>
+        foreach (CStruct s in CStruct.ParseAll(ctx, lines))
+        {
+            if (!ctx.CheckSymbol(s.Name))
+                continue;
+            ctx.Structs.Add(s);
+        }
+    });
+
+    private static async Task ParseFunctions(List<string> lines, CParserContext ctx) => await Task.Run(() => 
+    {
+        foreach (string line in lines)
         {
             CFunction func = CFunction.Parse(ctx, line);
             if (func == null || !ctx.CheckSymbol(func.Name))
-                return new();
+                continue;
             ctx.Functions.Add(func);
-            return new();
-        }));
+        }
+    });
+
+    public static async Task ParseFile(string[] rawLines, CParserContext ctx)
+    {
+        List<string> lines = await TaskRunner.Run("Preparing file", PrepareFile(rawLines, ctx));
+        await TaskRunner.Run("Parsing constants and opaque structs", ParseConstants(lines, ctx));
+        string[] structNames = await TaskRunner.Run("Parsing structs (lazy)", ParseStructsLazy(lines, ctx));
+        await TaskRunner.Run("Parsing callbacks", ParseCallbacks(lines, ctx));
+        await TaskRunner.Run("Parsing structs", ParseStructs(lines, structNames, ctx));
+        await TaskRunner.Run("Parsing functions", ParseFunctions(lines, ctx));
     }
 }

@@ -44,9 +44,13 @@ internal partial class CTypeConverter
         }
         else if (!ulong.TryParse(s, null, out value))
         {
-            if (float.TryParse(s, out _))
-                return (new("float"), s);
-            return (null, null);
+            if (!long.TryParse(s, null, out long sValue))
+            {
+                if (float.TryParse(s, out _))
+                    return (new("float"), s);
+                return (null, null);
+            }
+            value = (ulong)sValue;
         }
 
         if (value > 0x7FFFFFFF_FFFFFFFF)

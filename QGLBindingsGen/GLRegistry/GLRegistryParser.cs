@@ -19,102 +19,106 @@ internal static class GLRegistryParser
         return type.Trim();
     }
 
-    private static async Task<ConcurrentBag<CConstant>> GetEnums(XmlDocument root)
+    private static async Task<List<CConstant>> GetEnums(XmlDocument root)
     {
-        ConcurrentBag<CConstant> allEnums = [];
+        List<CConstant> allEnums = [];
 
-        await Parallel.ForEachAsync(root.GetElementsByTagName("enums").Cast<XmlElement>(), async (enums, _) =>
+        await Task.Run(() =>
         {
-            await Parallel.ForEachAsync(enums.GetElementsByTagName("enum").Cast<XmlElement>(), (enm, _) =>
+            foreach (XmlElement enums in root.GetElementsByTagName("enums"))
             {
-                string name = enm.GetAttribute("name").Trim();
-                string rawValue = enm.GetAttribute("value").Trim();
-                (CType type, string value) = CTypeConverter.ProcessConstant(rawValue);
-                if (type == null)
-                    return new();
-                allEnums.Add(new CConstant(name, value, type));
-                return new();
-            });
+                foreach (XmlElement enm in enums.GetElementsByTagName("enum"))
+                {
+                    string name = enm.GetAttribute("name").Trim();
+                    string rawValue = enm.GetAttribute("value").Trim();
+                    (CType type, string value) = CTypeConverter.ProcessConstant(rawValue);
+                    if (type == null)
+                        continue;
+                    allEnums.Add(new CConstant(name, value, type));
+                }
+            }
         });
 
         return allEnums;
     }
 
-    private static async Task<ConcurrentBag<CFunction>> GetCommands(CParserContext ctx, XmlDocument root)
+    private static async Task<List<CFunction>> GetCommands(CParserContext ctx, XmlDocument root)
     {
-        ConcurrentBag<CFunction> funcs = [];
+        List<CFunction> funcs = [];
 
-        await Parallel.ForEachAsync(root.GetElementsByTagName("commands").Cast<XmlElement>(), async (commands, _) =>
+        await Task.Run(() =>
         {
-            await Parallel.ForEachAsync(commands.GetElementsByTagName("command").Cast<XmlElement>(), (cmd, _) =>
+            foreach (XmlElement commands in root.GetElementsByTagName("commands"))
             {
-                XmlNode protoElem = cmd.SelectSingleNode("proto");
-                if (protoElem == null)
-                    return new();
-
-                XmlNode nameElem = protoElem.SelectSingleNode("name");
-                if (nameElem == null)
-                    return new();
-
-                string args = "";
-                foreach (XmlElement arg in cmd.GetElementsByTagName("param"))
+                foreach (XmlElement cmd in commands.GetElementsByTagName("command"))
                 {
-                    XmlNode aNameElem = arg.SelectSingleNode("name");
-                    if (aNameElem == null)
+                    XmlNode protoElem = cmd.SelectSingleNode("proto");
+                    if (protoElem == null)
                         continue;
-                    args += $"{GetArgType(arg)} {aNameElem.InnerText.Trim()}, ";
-                }
-                if (args.Length != 0)
-                    args = args[..^2];
 
-                string name = nameElem.InnerText.Trim();
-                string retType = GetArgType(protoElem);
-                funcs.Add(new CFunction(ctx, name, retType, args));
-                return new();
-            });
+                    XmlNode nameElem = protoElem.SelectSingleNode("name");
+                    if (nameElem == null)
+                        continue;
+
+                    string args = "";
+                    foreach (XmlElement arg in cmd.GetElementsByTagName("param"))
+                    {
+                        XmlNode aNameElem = arg.SelectSingleNode("name");
+                        if (aNameElem == null)
+                            continue;
+                        args += $"{GetArgType(arg)} {aNameElem.InnerText.Trim()}, ";
+                    }
+                    if (args.Length != 0)
+                        args = args[..^2];
+
+                    string name = nameElem.InnerText.Trim();
+                    string retType = GetArgType(protoElem);
+                    funcs.Add(new CFunction(ctx, name, retType, args));
+                }
+            }
         });
 
         return funcs;
     }
 
-    private static async Task<CParserContext> GetFeature(CParserContext baseCtx, XmlElement feature, 
-        ConcurrentBag<CConstant> enums, ConcurrentBag<CFunction> commands)
+    private static async Task<CParserContext> GetFeature(CParserContext baseCtx, XmlElement feature, List<CConstant> enums, List<CFunction> commands)
     {
         CParserContext ctx = new(baseCtx.RemoveWords);
         foreach (KeyValuePair<string, string> kv in baseCtx.TypeMap)
             ctx.TypeMap[kv.Key] = kv.Value;
 
-        await Parallel.ForEachAsync(feature.GetElementsByTagName("require").Cast<XmlElement>(), async (require, _) =>
+        await Task.Run(() =>
         {
-            await Parallel.ForEachAsync(require.GetElementsByTagName("enum").Cast<XmlElement>(), (enm, _) =>
+            foreach (XmlElement require in feature.GetElementsByTagName("require"))
             {
-                string name = enm.GetAttribute("name").Trim();
-                foreach (CConstant c in enums)
+                foreach (XmlElement enm in require.GetElementsByTagName("enum"))
                 {
-                    if (c.Name == name)
+                    string name = enm.GetAttribute("name").Trim();
+                    foreach (CConstant c in enums)
                     {
-                        if (ctx.CheckSymbol(c.Name))
-                            ctx.Constants.Add(c);
-                        break;
+                        if (c.Name == name)
+                        {
+                            if (ctx.CheckSymbol(c.Name))
+                                ctx.Constants.Add(c);
+                            break;
+                        }
                     }
                 }
-                return new();
-            });
 
-            await Parallel.ForEachAsync(require.GetElementsByTagName("command").Cast<XmlElement>(), (cmd, _) =>
-            {
-                string name = cmd.GetAttribute("name").Trim();
-                foreach (CFunction f in commands)
+                foreach (XmlElement cmd in require.GetElementsByTagName("command"))
                 {
-                    if (f.Name == name)
+                    string name = cmd.GetAttribute("name").Trim();
+                    foreach (CFunction f in commands)
                     {
-                        if (ctx.CheckSymbol(f.Name))
-                            ctx.Functions.Add(f);
-                        break;
+                        if (f.Name == name)
+                        {
+                            if (ctx.CheckSymbol(f.Name))
+                                ctx.Functions.Add(f);
+                            break;
+                        }
                     }
                 }
-                return new();
-            });
+            }
         });
 
         return ctx;
@@ -125,43 +129,47 @@ internal static class GLRegistryParser
         XmlDocument root = new();
         root.Load(new StringReader(string.Join('\n', lines)));
 
-        ConcurrentBag<CConstant> constants = await TaskRunner.Run("Parsing enums", GetEnums(root));
-        ConcurrentBag<CFunction> functions = await TaskRunner.Run("Parsing commands", GetCommands(baseCtx, root));
+        List<CConstant> constants = await TaskRunner.Run("Parsing enums", GetEnums(root));
+        List<CFunction> functions = await TaskRunner.Run("Parsing commands", GetCommands(baseCtx, root));
         List<GLFeature> features = [];
 
-        await TaskRunner.Run("Parsing features", Parallel.ForEachAsync(
-            root.GetElementsByTagName("feature").Cast<XmlElement>(), async (feature, _) =>
+        await TaskRunner.Run("Parsing features", Task.Run(async () =>
         {
-            string name = feature.GetAttribute("name").Trim();
-            string api = feature.GetAttribute("api").Trim();
-            if (allowedFeatures != null && !allowedFeatures.Contains(name))
-                return;
-            CParserContext ctx = await GetFeature(baseCtx, feature, constants, functions);
-            features.Add(new GLFeature(name, false, api.Contains("gles"), ctx));
+            foreach (XmlElement feature in root.GetElementsByTagName("feature"))
+            {
+                string name = feature.GetAttribute("name").Trim();
+                string api = feature.GetAttribute("api").Trim();
+                if (allowedFeatures != null && !allowedFeatures.Contains(name))
+                    return;
+                CParserContext ctx = await GetFeature(baseCtx, feature, constants, functions);
+                features.Add(new GLFeature(name, false, api.Contains("gles"), ctx));
+            }
         }));
 
-        await TaskRunner.Run("Parsing extensions", Parallel.ForEachAsync(
-            root.GetElementsByTagName("extension").Cast<XmlElement>(), async (extension, _) =>
+        await TaskRunner.Run("Parsing extensions", Task.Run(async () =>
         {
-            string name = extension.GetAttribute("name").Trim();
-
-            if (allowedExt != null && !allowedExt.Contains(name))
+            foreach (XmlElement extension in root.GetElementsByTagName("extension"))
             {
-                foreach (string pattern in allowedExt)
-                {
-                    if (!pattern.StartsWith("@/"))
-                        continue;
-                    if (Regex.IsMatch(name, pattern[2..]))
-                        goto passed;
-                }
-                return;
-            }
+                string name = extension.GetAttribute("name").Trim();
 
-        passed:
-            string[] supportedAPI = extension.GetAttribute("supported").Trim().Split('|');
-            bool isEs = !supportedAPI.Contains("gl") && !supportedAPI.Contains("glcore");
-            CParserContext ctx = await GetFeature(baseCtx, extension, constants, functions);
-            features.Add(new GLFeature(name, true, isEs, ctx));
+                if (allowedExt != null && !allowedExt.Contains(name))
+                {
+                    foreach (string pattern in allowedExt)
+                    {
+                        if (!pattern.StartsWith("@/"))
+                            continue;
+                        if (Regex.IsMatch(name, pattern[2..]))
+                            goto passed;
+                    }
+                    continue;
+                }
+
+            passed:
+                string[] supportedAPI = extension.GetAttribute("supported").Trim().Split('|');
+                bool isEs = !supportedAPI.Contains("gl") && !supportedAPI.Contains("glcore");
+                CParserContext ctx = await GetFeature(baseCtx, extension, constants, functions);
+                features.Add(new GLFeature(name, true, isEs, ctx));
+            }
         }));
 
         return features;
