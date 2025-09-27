@@ -1,4 +1,5 @@
-﻿using QGLBindingsGen.CParsing;
+﻿using System.Diagnostics;
+using QGLBindingsGen.CParsing;
 using QGLBindingsGen.GLRegistry;
 
 namespace QGLBindingsGen;
@@ -11,13 +12,14 @@ public static class Program
     private const string GL_REGISTRY_URL = "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Registry/refs/heads/main/xml/gl.xml";
     private const string AL_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/al.h";
     private const string ALC_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/alc.h";
+    private static readonly HttpClient httpClient = new();
 
     private static async Task<string[]> GetOrCacheFile(string fileName, string url)
     {
         List<string> lines;
         if (!File.Exists(fileName))
         {
-            StringReader reader = new(await new HttpClient().GetStringAsync(url));
+            StringReader reader = new(await httpClient.GetStringAsync(url));
             lines = [];
             string line;
             while ((line = await reader.ReadLineAsync()) != null)
@@ -31,7 +33,7 @@ public static class Program
 
     private static async Task<CParserContext> ParseGLFWHeader()
     {
-        string[] header = await ConsoleUtils.RunTask("Downloading GLFW header", GetOrCacheFile("glfw3.h", GLFW_HEADER_URL));
+        string[] header = await TaskRunner.Run("Downloading GLFW header", GetOrCacheFile("glfw3.h", GLFW_HEADER_URL));
         CParserContext ctx = new(["GLFWAPI", "APIENTRY", "WINGDIAPI", "CALLBACK"]);
         await CParser.ParseFile(header, ctx);
         return ctx;
@@ -39,7 +41,7 @@ public static class Program
 
     private static async Task<List<GLFeature>> ParseGLRegistry(List<string> allowedFeatures, List<string> allowedExt)
     {
-        string[] registry = await ConsoleUtils.RunTask("Downloading GL registry", GetOrCacheFile("gl.xml", GL_REGISTRY_URL));
+        string[] registry = await TaskRunner.Run("Downloading GL registry", GetOrCacheFile("gl.xml", GL_REGISTRY_URL));
         CParserContext baseCtx = new();
         baseCtx.TypeMap.Add("GLenum", "uint");
         baseCtx.TypeMap.Add("GLboolean", "bool");
@@ -78,7 +80,7 @@ public static class Program
 
     private static async Task<CParserContext> ParseALHeader()
     {
-        string[] header = await ConsoleUtils.RunTask("Downloading AL header", GetOrCacheFile("al.h", AL_HEADER_URL));
+        string[] header = await TaskRunner.Run("Downloading AL header", GetOrCacheFile("al.h", AL_HEADER_URL));
         CParserContext ctx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API", "AL_CPLUSPLUS"]);
         ctx.TypeMap.Add("ALboolean", "byte");
         ctx.TypeMap.Add("ALchar", "byte");
@@ -99,7 +101,7 @@ public static class Program
 
     private static async Task<CParserContext> ParseALCHeader()
     {
-        string[] header = await ConsoleUtils.RunTask("Downloading ALC header", GetOrCacheFile("alc.h", ALC_HEADER_URL));
+        string[] header = await TaskRunner.Run("Downloading ALC header", GetOrCacheFile("alc.h", ALC_HEADER_URL));
         CParserContext ctx = new(["ALC_APIENTRY", "ALC_API_NOEXCEPT17", "ALC_API_NOEXCEPT", "ALC_API", "ALC_CPLUSPLUS"]);
         ctx.TypeMap.Add("ALCboolean", "byte");
         ctx.TypeMap.Add("ALCchar", "byte");
@@ -125,14 +127,14 @@ public static class Program
     {
         Directory.CreateDirectory(OUT_DIR);
 
-        Console.WriteLine("- Generating bindings for GLFW");
+        Logger.Info("Generating bindings for GLFW");
         await GenerateHeader("GLFW", await ParseGLFWHeader(), "QuickGL.GetGLFWProcAddress");
 
-        Console.WriteLine("- Generating bindings for OpenAL");
+        Logger.Info("Generating bindings for OpenAL");
         await GenerateHeader("AL", await ParseALHeader(), "QuickGL.GetALProcAddress");
         await GenerateHeader("ALC", await ParseALCHeader(), "QuickGL.GetALProcAddress");
 
-        Console.WriteLine("- Generating bindings for OpenGL");
+        Logger.Info("Generating bindings for OpenGL");
         List<GLFeature> features = await ParseGLRegistry(null, []);
         if (features.Any(feature => feature.IsExtension))
             Directory.CreateDirectory(Path.Combine(OUT_DIR, "Extensions"));
@@ -144,18 +146,29 @@ public static class Program
                 outDir = Path.Combine(OUT_DIR, "Extensions");
             await File.WriteAllTextAsync(Path.Combine(outDir, $"{Generator.GetGLFeatureClassName(feature)}.cs"), classData, token);
         });
+
+        Logger.Info("Done! Bindings generated successfully");
     }
 
     public static void Main()
     {
         try
         {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
             MainAsync().GetAwaiter().GetResult();
+            
+            Logger.Info("Task timings:");
+            foreach (KeyValuePair<string, (long, long)> timing in TaskRunner.TaskTimings)
+            {
+                TimeSpan time = Stopwatch.GetElapsedTime(timing.Value.Item1, timing.Value.Item2);
+                Logger.Info($"- {timing.Key}: {time.TotalMilliseconds:F2} ms");
+            }
         }
         catch (Exception ex)
         {
-            ConsoleUtils.WriteError(ex);
+            Logger.Log(Logger.LogLevel.ERROR, $"An error has occured", ex);
+#if DEBUG
+            throw;
+#endif
         }
     }
 }

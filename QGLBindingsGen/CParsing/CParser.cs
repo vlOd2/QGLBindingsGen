@@ -13,7 +13,7 @@ internal static partial class CParser
     {
         List<string> lines = [];
 
-        await ConsoleUtils.RunTask("Preparing file", Parallel.ForEachAsync(rawLines, (rawLine, _) =>
+        await TaskRunner.Run("Preparing file", Parallel.ForEachAsync(rawLines, (rawLine, _) =>
         {
             string line = rawLine.Trim();
 
@@ -33,7 +33,7 @@ internal static partial class CParser
             return new();
         }));
 
-        await ConsoleUtils.RunTask("Parsing constants and opaque structs", Parallel.ForEachAsync(lines, (line, _) =>
+        await TaskRunner.Run("Parsing constants and opaque structs", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CConstant cconst = CConstant.Parse(line);
             if (cconst != null)
@@ -47,7 +47,7 @@ internal static partial class CParser
             return new();
         }));
 
-        string[] structNames = await ConsoleUtils.RunTask("Parsing structs (lazy)", Task.Run(() =>
+        string[] structNames = await TaskRunner.Run("Parsing structs (lazy)", Task.Run(() =>
         {
             string[] structNames = CStruct.ParseAllNames(lines);
             foreach (CDefinition def in structNames.Select(name => new CDefinition(name, null)))
@@ -55,7 +55,7 @@ internal static partial class CParser
             return structNames;
         }));
 
-        await ConsoleUtils.RunTask("Parsing callbacks", Parallel.ForEachAsync(lines, (line, _) =>
+        await TaskRunner.Run("Parsing callbacks", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CDefinition def = CDefinition.ParseCallback(ctx, line);
             if (def == null)
@@ -64,7 +64,7 @@ internal static partial class CParser
             return new();
         }));
 
-        await ConsoleUtils.RunTask("Parsing structs", Task.Run(() =>
+        await TaskRunner.Run("Parsing structs", Task.Run(() =>
         {
             foreach (CStruct s in CStruct.ParseAll(ctx, lines))
                 ctx.Structs.Add(s);
@@ -74,7 +74,7 @@ internal static partial class CParser
                 ctx.Definitions.Add(def);
         }));
 
-        await ConsoleUtils.RunTask("Parsing functions", Parallel.ForEachAsync(lines, (line, _) =>
+        await TaskRunner.Run("Parsing functions", Parallel.ForEachAsync(lines, (line, _) =>
         {
             CFunction func = CFunction.Parse(ctx, line);
             if (func == null)

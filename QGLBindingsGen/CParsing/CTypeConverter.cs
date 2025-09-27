@@ -156,7 +156,7 @@ internal partial class CTypeConverter
             if (!ctx.UnknownTypes.Contains(cType))
             {
                 ctx.UnknownTypes.Add(cType);
-                Console.WriteLine($"Unknown type: {cType}");
+                Logger.Warn($"Unknown type: {cType}");
             }
         }
 

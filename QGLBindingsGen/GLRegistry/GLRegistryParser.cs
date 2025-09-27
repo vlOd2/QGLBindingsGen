@@ -123,11 +123,11 @@ internal static class GLRegistryParser
         XmlDocument root = new();
         root.Load(new StringReader(string.Join('\n', lines)));
 
-        ConcurrentBag<CConstant> constants = await ConsoleUtils.RunTask("Parsing enums", GetEnums(root));
-        ConcurrentBag<CFunction> functions = await ConsoleUtils.RunTask("Parsing commands", GetCommands(baseCtx, root));
+        ConcurrentBag<CConstant> constants = await TaskRunner.Run("Parsing enums", GetEnums(root));
+        ConcurrentBag<CFunction> functions = await TaskRunner.Run("Parsing commands", GetCommands(baseCtx, root));
         List<GLFeature> features = [];
 
-        await ConsoleUtils.RunTask("Parsing features", Parallel.ForEachAsync(
+        await TaskRunner.Run("Parsing features", Parallel.ForEachAsync(
             root.GetElementsByTagName("feature").Cast<XmlElement>(), async (feature, _) =>
         {
             string name = feature.GetAttribute("name").Trim();
@@ -138,7 +138,7 @@ internal static class GLRegistryParser
             features.Add(new GLFeature(name, false, api.Contains("gles"), ctx));
         }));
 
-        await ConsoleUtils.RunTask("Parsing extensions", Parallel.ForEachAsync(
+        await TaskRunner.Run("Parsing extensions", Parallel.ForEachAsync(
             root.GetElementsByTagName("extension").Cast<XmlElement>(), async (extension, _) =>
         {
             string name = extension.GetAttribute("name").Trim();
