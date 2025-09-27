@@ -10,6 +10,7 @@ public static class Program
     private const string GLFW_HEADER_URL = "https://raw.githubusercontent.com/glfw/glfw/refs/heads/master/include/GLFW/glfw3.h";
     private const string GL_REGISTRY_URL = "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Registry/refs/heads/main/xml/gl.xml";
     private const string AL_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/al.h";
+    private const string ALC_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/alc.h";
 
     private static async Task<string[]> GetOrCacheFile(string fileName, string url)
     {
@@ -38,7 +39,7 @@ public static class Program
 
     private static async Task<List<GLFeature>> ParseGLRegistry(List<string> allowedFeatures, List<string> allowedExt)
     {
-        string[] registry = await GetOrCacheFile("gl.xml", GL_REGISTRY_URL);
+        string[] registry = await ConsoleUtils.RunTask("Downloading GL registry", GetOrCacheFile("gl.xml", GL_REGISTRY_URL));
         CParserContext baseCtx = new();
         baseCtx.TypeMap.Add("GLenum", "uint");
         baseCtx.TypeMap.Add("GLboolean", "bool");
@@ -77,7 +78,7 @@ public static class Program
 
     private static async Task<CParserContext> ParseALHeader()
     {
-        string[] header = await GetOrCacheFile("al.h", AL_HEADER_URL);
+        string[] header = await ConsoleUtils.RunTask("Downloading AL header", GetOrCacheFile("al.h", AL_HEADER_URL));
         CParserContext ctx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API", "AL_CPLUSPLUS"]);
         ctx.TypeMap.Add("ALboolean", "byte");
         ctx.TypeMap.Add("ALchar", "byte");
@@ -96,19 +97,45 @@ public static class Program
         return ctx;
     }
 
+    private static async Task<CParserContext> ParseALCHeader()
+    {
+        string[] header = await ConsoleUtils.RunTask("Downloading ALC header", GetOrCacheFile("alc.h", ALC_HEADER_URL));
+        CParserContext ctx = new(["ALC_APIENTRY", "ALC_API_NOEXCEPT17", "ALC_API_NOEXCEPT", "ALC_API", "ALC_CPLUSPLUS"]);
+        ctx.TypeMap.Add("ALCboolean", "byte");
+        ctx.TypeMap.Add("ALCchar", "byte");
+        ctx.TypeMap.Add("ALCbyte", "sbyte");
+        ctx.TypeMap.Add("ALCubyte", "byte");
+        ctx.TypeMap.Add("ALCshort", "short");
+        ctx.TypeMap.Add("ALCushort", "ushort");
+        ctx.TypeMap.Add("ALCint", "int");
+        ctx.TypeMap.Add("ALCuint", "uint");
+        ctx.TypeMap.Add("ALCsizei", "int");
+        ctx.TypeMap.Add("ALCenum", "int");
+        ctx.TypeMap.Add("ALCfloat", "float");
+        ctx.TypeMap.Add("ALCdouble", "double");
+        ctx.TypeMap.Add("ALCvoid", "void");
+        await CParser.ParseFile(header, ctx);
+        return ctx;
+    }
+
+    private static async Task GenerateHeader(string name, CParserContext ctx, string procAddr)
+        => await File.WriteAllTextAsync(Path.Combine(OUT_DIR, $"{name}.cs"), Generator.Generate(ctx, name, BINDINGS_NAMESPACE, procAddr));
+
     private static async Task MainAsync()
     {
         Directory.CreateDirectory(OUT_DIR);
 
         Console.WriteLine("- Generating bindings for GLFW");
-        await File.WriteAllTextAsync(Path.Combine(OUT_DIR, "GLFW.cs"), 
-            Generator.Generate(await ParseGLFWHeader(), "GLFW", BINDINGS_NAMESPACE, "QuickGL.GetGLFWProcAddress"));
+        await GenerateHeader("GLFW", await ParseGLFWHeader(), "QuickGL.GetGLFWProcAddress");
+
+        Console.WriteLine("- Generating bindings for OpenAL");
+        await GenerateHeader("AL", await ParseALHeader(), "QuickGL.GetALProcAddress");
+        await GenerateHeader("ALC", await ParseALCHeader(), "QuickGL.GetALProcAddress");
 
         Console.WriteLine("- Generating bindings for OpenGL");
-        List<GLFeature> features = await ParseGLRegistry(null, [@"@/GL_ARB_.*"]);
+        List<GLFeature> features = await ParseGLRegistry(null, []);
         if (features.Any(feature => feature.IsExtension))
             Directory.CreateDirectory(Path.Combine(OUT_DIR, "Extensions"));
-
         await Parallel.ForEachAsync(features, async (feature, token) =>
         {
             string classData = Generator.GenerateGLFeature(feature, BINDINGS_NAMESPACE);
