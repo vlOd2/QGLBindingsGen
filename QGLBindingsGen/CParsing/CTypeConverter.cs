@@ -35,6 +35,8 @@ internal partial class CTypeConverter
     public static (CType type, string value) ProcessConstant(string s)
     {
         ulong value;
+        long sValue = 0;
+        bool useSigned = false;
 
         if (s.StartsWith("0x"))
         {
@@ -44,13 +46,25 @@ internal partial class CTypeConverter
         }
         else if (!ulong.TryParse(s, null, out value))
         {
-            if (!long.TryParse(s, null, out long sValue))
+            if (!long.TryParse(s, null, out sValue))
             {
                 if (float.TryParse(s, out _))
                     return (new("float"), s);
                 return (null, null);
             }
-            value = (ulong)sValue;
+            useSigned = true;
+        }
+
+        if (useSigned)
+        {
+            if (sValue < 0)
+            {
+                if (sValue < int.MinValue)
+                    return (new("long"), sValue.ToString());
+                return (new("int"), sValue.ToString());
+            }
+            Logger.Warn($"Parsed as signed value when unsigned was possible: {s}");
+            return (null, null);
         }
 
         if (value > 0x7FFFFFFF_FFFFFFFF)

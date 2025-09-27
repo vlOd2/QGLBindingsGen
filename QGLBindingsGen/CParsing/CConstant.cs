@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.RegularExpressions;
 
 namespace QGLBindingsGen.CParsing;
@@ -33,8 +34,28 @@ internal partial class CConstant
         (CType type, string value) = CTypeConverter.ProcessConstant(rawValue);
 
         if (type == null)
-            return new CConstant(name, rawValue, new CType("int")); // I am hoping this is large enough for most
+        {
+            using DataTable dataTable = new();
+            object computedVal = DBNull.Value;
+            try
+            {
+                computedVal = dataTable.Compute(rawValue, "");
+            }
+            catch { }
+            if (computedVal != DBNull.Value)
+            {
+                (type, value) = CTypeConverter.ProcessConstant(computedVal.ToString());
+                if (type != null)
+                {
+                    Logger.Warn($"[EXPERIMENTAL] Computed constant: {rawValue} -> {computedVal}");
+                    goto success;
+                }
+            }
+            // I am hoping this is large enough for most
+            return new CConstant(name, rawValue, rawValue.Contains('-') ? new CType("int") : new CType("uint"));
+        }
 
+    success:
         return new CConstant(name, value, type);
     }
 }
