@@ -83,7 +83,7 @@ public static class Program
     {
         string[] header = await TaskRunner.Run("Downloading AL header", GetOrCacheFile("al.h", AL_HEADER_URL));
         CParserContext ctx = new(["AL_APIENTRY", "AL_API_NOEXCEPT17", "AL_API_NOEXCEPT", "AL_API", "AL_CPLUSPLUS"]);
-        ctx.TypeMap.Add("ALboolean", "byte");
+        ctx.TypeMap.Add("ALboolean", "bool");
         ctx.TypeMap.Add("ALchar", "byte");
         ctx.TypeMap.Add("ALbyte", "sbyte");
         ctx.TypeMap.Add("ALubyte", "byte");
@@ -104,7 +104,7 @@ public static class Program
     {
         string[] header = await TaskRunner.Run("Downloading ALC header", GetOrCacheFile("alc.h", ALC_HEADER_URL));
         CParserContext ctx = new(["ALC_APIENTRY", "ALC_API_NOEXCEPT17", "ALC_API_NOEXCEPT", "ALC_API", "ALC_CPLUSPLUS"]);
-        ctx.TypeMap.Add("ALCboolean", "byte");
+        ctx.TypeMap.Add("ALCboolean", "bool");
         ctx.TypeMap.Add("ALCchar", "byte");
         ctx.TypeMap.Add("ALCbyte", "sbyte");
         ctx.TypeMap.Add("ALCubyte", "byte");
