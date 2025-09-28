@@ -27,8 +27,7 @@ public static class Program
         {
             StringReader reader = new(await httpClient.GetStringAsync(url));
             lines = [];
-            string line;
-            while ((line = await reader.ReadLineAsync()) != null)
+            while (await reader.ReadLineAsync() is string line)
                 lines.Add(line);
             await File.WriteAllLinesAsync(fileName, lines);
         }

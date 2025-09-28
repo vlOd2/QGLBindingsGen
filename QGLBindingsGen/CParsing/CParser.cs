@@ -4,11 +4,6 @@ namespace QGLBindingsGen.CParsing;
 
 internal static partial class CParser
 {
-    #region Patterns
-    [GeneratedRegex(@"([a-zA-Z0-9_ *]+(?= )(?!, ))([a-zA-Z0-9_ *]+(?:\[\d*\]){0,1})")]
-    public static partial Regex ArgsPattern();
-    #endregion
-
     private static async Task<List<string>> PrepareFile(string[] rawLines, CParserContext ctx) => await Task.Run(() =>
     {
         List<string> lines = [];

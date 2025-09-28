@@ -5,27 +5,17 @@ namespace QGLBindingsGen.CParsing;
 internal partial class CFunction
 {
     #region Patterns
-    [GeneratedRegex(@"^\s*([a-zA-Z0-9_ ]+\**?) ([a-zA-Z0-9_]+)\((.*)\)\s*?;")]
+    [GeneratedRegex(@"^\s*([a-zA-Z0-9_ ]+\**?) (\**?[a-zA-Z0-9_]+)\((.*)\)\s*?;")]
     private static partial Regex FuncPattern();
     #endregion
-    public string Name;
-    public CType ReturnType;
-    public Dictionary<string, CType> Args;
+    public readonly string Name;
+    public readonly CType ReturnType;
+    public readonly Dictionary<string, CType> Args;
 
     public CFunction(CParserContext ctx, string name, string returnType, string args)
     {
-        Name = name;
-
-        (ReturnType, _) = ctx.TypeConv.Convert(returnType, null, false);
-        Args = [];
-
-        foreach (Match arg in CParser.ArgsPattern().Matches(args))
-        {
-            string rawType = arg.Groups[1].Value.Trim();
-            string rawName = arg.Groups[2].Value.Trim();
-            (CType type, string aName) = ctx.TypeConv.Convert(rawType, rawName, false);
-            Args[aName] = type;
-        }
+        (ReturnType, Name) = ctx.TypeConv.Convert(returnType, name, false);
+        Args = CArgParser.Parse(ctx, name, args);
     }
 
     public static CFunction Parse(CParserContext ctx, string line)

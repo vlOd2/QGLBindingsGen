@@ -7,10 +7,13 @@ internal partial class CTypeConverter
 {
     #region Patterns
     [GeneratedRegex(@"\[\d+\]")]
-    private partial Regex ArraySizeRemovalPattern();
+    private static partial Regex ArraySizeRemovalPattern();
 
     [GeneratedRegex(@"^.*\[(\d+)\]$")]
-    private partial Regex ArraySizePattern();
+    private static partial Regex ArraySizePattern();
+
+    [GeneratedRegex(@"\b(const|volatile|restrict|inline)\b")]
+    private static partial Regex QualifierPattern();
     #endregion
     private CParserContext ctx;
 
@@ -86,7 +89,7 @@ internal partial class CTypeConverter
 
     public (CType, string) Convert(string cType, string argName, bool convertCallbacks)
     {
-        cType = cType.Trim().Replace("const ", "");
+        cType = QualifierPattern().Replace(cType, "").Trim();
         int ptrCount = cType.Where(c => c == '*').Count();
         cType = cType.Replace("*", "").Trim();
 
@@ -177,6 +180,6 @@ internal partial class CTypeConverter
             }
         }
 
-        return (new CType(convertedType, ptrCount), argName);
+        return (new CType(convertedType, ptrCount), argName?.Trim());
     }
 }

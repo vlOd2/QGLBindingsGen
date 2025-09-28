@@ -9,44 +9,29 @@ internal partial class CStruct
     [GeneratedRegex(@"struct ([a-zA-Z0-9_*]+)\s*?{((?:.|\s)+?)\n}(?:[a-zA-Z0-9_* ]+)?;")]
     private static partial Regex StructPattern();
 
-    [GeneratedRegex(@"([a-zA-Z0-9_ *]+)\(\*\s*([a-zA-Z0-9_]+)\)\((.*)\)")]
-    private static partial Regex CallbackFieldPattern();
+    [GeneratedRegex(@"\s*?\/\/.*?$")]
+    private static partial Regex FieldCommentsPattern();
     #endregion
     public string Name;
     public Dictionary<string, CType> Fields;
 
-    public CStruct(CParserContext ctx, string name, string fields)
+    public CStruct(CParserContext ctx, string name, string rawFields)
     {
         Name = name;
-        ParseFields(ctx, fields);
-    }
 
-    private void ParseFields(CParserContext ctx, string fields)
-    {
-        Fields = [];
-        foreach (string line in fields.Split('\n'))
+        string fields = "";
+        foreach (string line in rawFields.Split('\n'))
         {
             string l = line.Trim().Replace(";", "");
             if (l.StartsWith("//") || l.StartsWith("/*") || l.StartsWith('!') || l.StartsWith('*'))
                 continue;
-
-            Match match = CallbackFieldPattern().Match(l);
-            if (match.Success)
-            {
-                // TODO: Properly parse callback fields
-                Fields[match.Groups[2].Value.Trim()] = new CType("nint");
-                continue;
-            }
-
-            match = CParser.ArgsPattern().Match(l);
-            if (!match.Success)
-                continue;
-
-            string rawType = match.Groups[1].Value.Trim();
-            string rawName = match.Groups[2].Value.Trim();
-            (CType type, string name) = ctx.TypeConv.Convert(rawType, rawName, true);
-            Fields[name] = type;
+            l = FieldCommentsPattern().Replace(l, "").Trim();
+            fields += $"{l}, ";
         }
+        if (fields.Length > 2)
+            fields = fields[..^2].Trim();
+
+        Fields = CArgParser.Parse(ctx, Name, fields);
     }
 
     private static void SearchStructs(List<string> lines, Action<Match> handleStructMatch)
