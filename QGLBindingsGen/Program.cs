@@ -1,5 +1,9 @@
-﻿using System.Diagnostics;
-using System.Xml.Linq;
+﻿//#define SHOW_TASK_TIMINGS
+#define LIBUI_TESTING_MODE
+
+#if SHOW_TASK_TIMINGS
+using System.Diagnostics;
+#endif
 using QGLBindingsGen.CParsing;
 using QGLBindingsGen.GLRegistry;
 
@@ -13,6 +17,7 @@ public static class Program
     private const string GL_REGISTRY_URL = "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Registry/refs/heads/main/xml/gl.xml";
     private const string AL_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/al.h";
     private const string ALC_HEADER_URL = "https://raw.githubusercontent.com/kcat/openal-soft/refs/heads/master/include/AL/alc.h";
+    private const string LIBUI_HEADER_URL = "https://raw.githubusercontent.com/andlabs/libui/refs/heads/master/ui.h";
     private static readonly HttpClient httpClient = new();
 
     private static async Task<string[]> GetOrCacheFile(string fileName, string url)
@@ -121,6 +126,14 @@ public static class Program
         return ctx;
     }
 
+    private static async Task<CParserContext> ParseLibUIHeader()
+    {
+        string[] header = await TaskRunner.Run("Downloading LibUI header", GetOrCacheFile("ui.h", LIBUI_HEADER_URL));
+        CParserContext ctx = new(["_UI_EXTERN"]);
+        await CParser.ParseFile(header, ctx);
+        return ctx;
+    }
+
     private static async Task GenerateHeader(string name, CParserContext ctx, string procAddr)
         => await File.WriteAllTextAsync(Path.Combine(OUT_DIR, $"{name}.cs"), Generator.Generate(ctx, name, BINDINGS_NAMESPACE, procAddr));
 
@@ -128,6 +141,9 @@ public static class Program
     {
         Directory.CreateDirectory(OUT_DIR);
 
+#if LIBUI_TESTING_MODE
+        await GenerateHeader("LibUI", await ParseLibUIHeader(), "QuickGL.GetLibUIProcAddress");
+#else
         Logger.Info("Generating bindings for GLFW");
         await GenerateHeader("GLFW", await ParseGLFWHeader(), "QuickGL.GetGLFWProcAddress");
 
@@ -150,6 +166,7 @@ public static class Program
 
         Logger.Info("Generating OpenGL bindings manager");
         await File.WriteAllTextAsync(Path.Combine(OUT_DIR, "GLBindingsManager.cs"), Generator.GenerateGLBindingsMgr(features, BINDINGS_NAMESPACE));
+#endif
 
         Logger.Info("Done! Bindings generated successfully");
     }
@@ -159,7 +176,8 @@ public static class Program
         try
         {
             MainAsync().GetAwaiter().GetResult();
-            
+
+#if SHOW_TASK_TIMINGS
             Logger.Info("Task timings:");
             double totalTime = 0;
             foreach (KeyValuePair<string, (long, long)> timing in TaskRunner.TaskTimings)
@@ -169,6 +187,7 @@ public static class Program
                 Logger.Info($"- {timing.Key}: {time.TotalMilliseconds:F2} ms");
             }
             Logger.Info($"Total time: {totalTime:F2} ms");
+#endif
         }
         catch (Exception ex)
         {
