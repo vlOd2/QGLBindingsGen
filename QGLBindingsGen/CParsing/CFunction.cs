@@ -15,7 +15,7 @@ internal partial class CFunction
     public CFunction(CParserContext ctx, string name, string returnType, string args)
     {
         (ReturnType, Name) = ctx.TypeConv.Convert(returnType, name, false);
-        Args = CArgParser.Parse(ctx, name, args);
+        Args = CArgParser.Parse(ctx, name, args, false);
     }
 
     public static CFunction Parse(CParserContext ctx, string line)

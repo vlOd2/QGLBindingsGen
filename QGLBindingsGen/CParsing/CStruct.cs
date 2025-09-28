@@ -31,7 +31,7 @@ internal partial class CStruct
         if (fields.Length > 2)
             fields = fields[..^2].Trim();
 
-        Fields = CArgParser.Parse(ctx, Name, fields);
+        Fields = CArgParser.Parse(ctx, Name, fields, true);
     }
 
     private static void SearchStructs(List<string> lines, Action<Match> handleStructMatch)

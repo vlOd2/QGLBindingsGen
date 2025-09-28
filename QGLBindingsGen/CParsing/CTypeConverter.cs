@@ -123,7 +123,12 @@ internal partial class CTypeConverter
             if (cType == def.Name)
             {
                 if (def.Callback != null && convertCallbacks)
+                {
                     convertedType = "nint";
+                    ptrCount--;
+                    if (ptrCount < 0)
+                        ptrCount = 0;
+                }
                 else
                     convertedType = cType;
                 break;

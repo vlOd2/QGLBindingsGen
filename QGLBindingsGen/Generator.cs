@@ -14,7 +14,11 @@ internal static class Generator
         builder.AppendLine($"public unsafe struct {s.Name}");
         builder.AppendLine("{");
         foreach (KeyValuePair<string, CType> field in s.Fields)
+        {
+            if (field.Value.NativeConvertedName != null)
+                builder.AppendLine($"    /// pointer to {field.Value.NativeConvertedName}");
             builder.AppendLine($"    public {field.Value} {field.Key};");
+        }
         builder.AppendLine("}");
     }
 

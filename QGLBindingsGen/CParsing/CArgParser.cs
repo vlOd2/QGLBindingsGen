@@ -35,7 +35,7 @@ internal static partial class CArgParser
         return result;
     }
 
-    public static Dictionary<string, CType> Parse(CParserContext ctx, string defPrefix, string rawArgs)
+    public static Dictionary<string, CType> Parse(CParserContext ctx, string defPrefix, string rawArgs, bool convertCallbacks)
     {
         List<string> _rawArgs = SplitArgs(rawArgs.Trim());
         Dictionary<string, CType> args = [];
@@ -57,7 +57,7 @@ internal static partial class CArgParser
                     throw new Exception($"Func ptr def conflict: {def}");
 
                 ctx.Definitions.Add(new(def, new CFunction(ctx, def, retType, fArgs)));
-                args[name] = new CType(def, 1);
+                args[name] = convertCallbacks ? new CType("nint", 0, def) : new(def, 1);
             }
             else
             {
