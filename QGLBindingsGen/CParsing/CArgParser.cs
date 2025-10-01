@@ -51,13 +51,13 @@ internal static partial class CArgParser
                 string name = match.Groups[2].Value.Trim();
                 string retType = match.Groups[1].Value.Trim();
                 string fArgs = match.Groups[3].Value.Trim();
-                string def = $"{defPrefix}{name.GetHashCode():X}_{name}";
+                string def = $"{defPrefix}_{fArgs.Split(' ').Length}_{name}";
 
                 if (!ctx.CheckSymbol(def))
                     throw new Exception($"Func ptr def conflict: {def}");
 
                 ctx.Definitions.Add(new(def, new CFunction(ctx, def, retType, fArgs)));
-                args[name] = convertCallbacks ? new CType("nint", 0, def) : new(def, 1);
+                args[name] = convertCallbacks ? new CType("nint", 0, def) : new(def);
             }
             else
             {
