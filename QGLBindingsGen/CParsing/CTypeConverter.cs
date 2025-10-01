@@ -118,6 +118,7 @@ internal partial class CTypeConverter
         }
 
         string convertedType = null;
+        string nativeConvertedName = null;
         foreach (CDefinition def in ctx.Definitions)
         {
             if (cType == def.Name)
@@ -128,6 +129,7 @@ internal partial class CTypeConverter
                     ptrCount--;
                     if (ptrCount < 0)
                         ptrCount = 0;
+                    nativeConvertedName = def.Name;
                 }
                 else
                     convertedType = cType;
@@ -185,6 +187,6 @@ internal partial class CTypeConverter
             }
         }
 
-        return (new CType(convertedType, ptrCount), argName?.Trim());
+        return (new CType(convertedType, ptrCount, nativeConvertedName), argName?.Trim());
     }
 }

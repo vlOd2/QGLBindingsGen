@@ -64,7 +64,7 @@ internal static partial class CArgParser
                 string[] split = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 string rawType = split.Length > 1 ? string.Join(' ', split[..^1]).Trim() : split[0].Trim();
                 string rawName = split.Length > 1 ? split[^1].Trim() : null;
-                (CType type, string name) = ctx.TypeConv.Convert(rawType, rawName, false);
+                (CType type, string name) = ctx.TypeConv.Convert(rawType, rawName, convertCallbacks);
                 if (string.IsNullOrWhiteSpace(name)) 
                     name = $"arg{namelessArgs++}";
                 args[name] = type;
