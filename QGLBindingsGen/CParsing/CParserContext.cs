@@ -8,6 +8,7 @@ internal class CParserContext
     public readonly List<CConstant> Constants = [];
     public readonly List<CDefinition> Definitions = [];
     public readonly List<CStruct> Structs = [];
+    public readonly List<CEnum> Enums = [];
     public readonly List<string> UnknownTypes = [];
     public readonly List<CFunction> Functions = [];
     private readonly List<string> declaredSymbols = [];

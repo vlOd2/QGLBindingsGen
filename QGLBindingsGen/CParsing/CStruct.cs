@@ -8,9 +8,6 @@ internal partial class CStruct
     #region Patterns
     [GeneratedRegex(@"struct ([a-zA-Z0-9_*]+)\s*?{((?:.|\s)+?)\n}(?:[a-zA-Z0-9_* ]+)?;")]
     private static partial Regex StructPattern();
-
-    [GeneratedRegex(@"\s*?\/\/.*?$")]
-    private static partial Regex FieldCommentsPattern();
     #endregion
     public string Name;
     public Dictionary<string, CType> Fields;
@@ -25,7 +22,7 @@ internal partial class CStruct
             string l = line.Trim().Replace(";", "");
             if (l.StartsWith("//") || l.StartsWith("/*") || l.StartsWith('!') || l.StartsWith('*'))
                 continue;
-            l = FieldCommentsPattern().Replace(l, "").Trim();
+            l = CParser.CommentPattern().Replace(l, "").Trim();
             fields += $"{l}, ";
         }
         if (fields.Length > 2)

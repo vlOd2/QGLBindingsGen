@@ -22,6 +22,25 @@ internal static class Generator
         builder.AppendLine("}");
     }
 
+    private static void AppendEnum(CEnum e, StringBuilder builder)
+    {
+        builder.AppendLine($"public enum {e.Name}");
+        builder.AppendLine("{");
+        foreach (KeyValuePair<string, string> value in e.Values)
+        {
+            if (value.Value != "")
+            {
+                if (value.Value.StartsWith('-'))
+                    builder.AppendLine($"    {value.Key} = unchecked((int){value.Value}),");
+                else
+                    builder.AppendLine($"    {value.Key} = {value.Value},");
+            }
+            else
+                builder.AppendLine($"    {value.Key},");
+        }
+        builder.AppendLine("}");
+    }
+
     private static void AppendDef(CDefinition def, StringBuilder builder)
     {
         if (def.Callback == null)
@@ -80,6 +99,12 @@ internal static class Generator
         foreach (CStruct s in ctx.Structs)
         {
             AppendStruct(s, builder);
+            builder.AppendLine();
+        }
+
+        foreach (CEnum e in ctx.Enums)
+        {
+            AppendEnum(e, builder);
             builder.AppendLine();
         }
 
@@ -146,7 +171,7 @@ internal static class Generator
 
         GenerateFileHeader(builder, @namespace);
         builder.AppendLine();
-        if (ctx.Structs.Count > 0 || ctx.Definitions.Count > 0)
+        if (ctx.Definitions.Count > 0 || ctx.Structs.Count > 0 || ctx.Enums.Count > 0)
         {
             GenerateOtherTypes(ctx, builder);
             builder.AppendLine();

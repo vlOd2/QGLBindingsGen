@@ -3,6 +3,8 @@
 
 #if SHOW_TASK_TIMINGS
 using System.Diagnostics;
+using System.Text.RegularExpressions;
+
 #endif
 using QGLBindingsGen.CParsing;
 using QGLBindingsGen.GLRegistry;
@@ -129,7 +131,19 @@ public static class Program
     {
         string[] header = await TaskRunner.Run("Downloading LibUI header", GetOrCacheFile("ui.h", LIBUI_HEADER_URL));
         CParserContext ctx = new(["_UI_EXTERN"]);
-        await CParser.ParseFile(header, ctx);
+        await CParser.ParseFile(header, ctx, lines =>
+        {
+            Logger.Info("[LibUI] Parsing enums");
+            string allLines = string.Join("\n", lines);
+            foreach (Match match in Regex.Matches(allLines, @"_UI_ENUM\((ui[a-zA-Z0-9_]+?)\) {((.|\s)+?)};"))
+            {
+                string name = match.Groups[1].Value.Trim();
+                string values = match.Groups[2].Value.Trim();
+                if (!ctx.CheckSymbol(name))
+                    continue;
+                ctx.Enums.Add(new(name, values));
+            }
+        });
         return ctx;
     }
 

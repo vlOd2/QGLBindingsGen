@@ -146,6 +146,15 @@ internal partial class CTypeConverter
             }
         }
 
+        foreach (CEnum e in ctx.Enums)
+        {
+            if (cType == e.Name)
+            {
+                convertedType = cType;
+                break;
+            }
+        }
+
         convertedType ??= cType switch
         {
             "void" => "void",

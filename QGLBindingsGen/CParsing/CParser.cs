@@ -1,9 +1,13 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace QGLBindingsGen.CParsing;
 
 internal static partial class CParser
 {
+    [GeneratedRegex(@"\s*?\/\/.*?$")]
+    public static partial Regex CommentPattern();
+
     private static async Task<List<string>> PrepareFile(string[] rawLines, CParserContext ctx) => await Task.Run(() =>
     {
         List<string> lines = [];
@@ -105,9 +109,10 @@ internal static partial class CParser
         }
     });
 
-    public static async Task ParseFile(string[] rawLines, CParserContext ctx)
+    public static async Task ParseFile(string[] rawLines, CParserContext ctx, Action<List<string>> customParser = null)
     {
         List<string> lines = await TaskRunner.Run("Preparing file", PrepareFile(rawLines, ctx));
+        customParser?.Invoke(lines);
         await TaskRunner.Run("Parsing constants and opaque structs", ParseConstants(lines, ctx));
         string[] structNames = await TaskRunner.Run("Parsing structs (lazy)", ParseStructsLazy(lines, ctx));
         await TaskRunner.Run("Parsing callbacks", ParseCallbacks(lines, ctx));
