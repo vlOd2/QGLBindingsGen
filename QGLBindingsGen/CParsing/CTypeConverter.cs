@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace QGLBindingsGen.CParsing;
@@ -16,6 +17,8 @@ internal partial class CTypeConverter
     private static partial Regex QualifierPattern();
     #endregion
     private CParserContext ctx;
+    private List<(CType, bool)> pending = [];
+    private bool scheduleUnknown;
 
     public CTypeConverter(CParserContext ctx)
     {
@@ -87,41 +90,13 @@ internal partial class CTypeConverter
         return name;
     }
 
-    public (CType, string) Convert(string cType, string argName, bool convertCallbacks)
+    private (string, int, string) ConvertType(string type, int ptrCount, bool convertCallbacks)
     {
-        cType = QualifierPattern().Replace(cType, "").Trim();
-        int ptrCount = cType.Where(c => c == '*').Count();
-        cType = cType.Replace("*", "").Trim();
-
-        if (argName != null)
-        {
-            while (argName.StartsWith('*'))
-            {
-                argName = argName[1..].Trim();
-                ptrCount++;
-            }
-            if (argName.EndsWith("[]"))
-            {
-                ptrCount++;
-                argName = argName[..^2].Trim();
-            }
-            else
-            {
-                Match match = ArraySizePattern().Match(argName);
-                if (match.Success)
-                {
-                    ptrCount++;
-                    argName = ArraySizeRemovalPattern().Replace(argName, "").Trim();
-                }
-            }
-            argName = SanitizeName(argName);
-        }
-
         string convertedType = null;
         string nativeConvertedName = null;
         foreach (CDefinition def in ctx.Definitions)
         {
-            if (cType == def.Name)
+            if (type == def.Name)
             {
                 if (def.Callback != null && convertCallbacks)
                 {
@@ -132,30 +107,30 @@ internal partial class CTypeConverter
                     nativeConvertedName = def.Name;
                 }
                 else
-                    convertedType = cType;
+                    convertedType = type;
                 break;
             }
         }
 
         foreach (CStruct s in ctx.Structs)
         {
-            if (cType == s.Name)
+            if (type == s.Name)
             {
-                convertedType = cType;
+                convertedType = type;
                 break;
             }
         }
 
         foreach (CEnum e in ctx.Enums)
         {
-            if (cType == e.Name)
+            if (type == e.Name)
             {
-                convertedType = cType;
+                convertedType = type;
                 break;
             }
         }
 
-        convertedType ??= cType switch
+        convertedType ??= type switch
         {
             "void" => "void",
             "char" => "byte",
@@ -183,19 +158,107 @@ internal partial class CTypeConverter
             "uintptr_t" => "nuint",
             _ => null
         };
-        convertedType ??= ctx.TypeMap.GetValueOrDefault(cType);
+        convertedType ??= ctx.TypeMap.GetValueOrDefault(type);
+
+        return (convertedType, ptrCount, nativeConvertedName);
+    }
+
+    public (CType, string) Convert(string type, string argName, bool convertCallbacks)
+    {
+        type = QualifierPattern().Replace(type, "").Trim();
+        int ptrCount = type.Where(c => c == '*').Count();
+        type = type.Replace("*", "").Trim();
+
+        if (argName != null)
+        {
+            while (argName.StartsWith('*'))
+            {
+                argName = argName[1..].Trim();
+                ptrCount++;
+            }
+            if (argName.EndsWith("[]"))
+            {
+                ptrCount++;
+                argName = argName[..^2].Trim();
+            }
+            else
+            {
+                Match match = ArraySizePattern().Match(argName);
+                if (match.Success)
+                {
+                    ptrCount++;
+                    argName = ArraySizeRemovalPattern().Replace(argName, "").Trim();
+                }
+            }
+            argName = SanitizeName(argName);
+        }
+
+        (string convertedType, ptrCount, string nativeConvertedName) = ConvertType(type, ptrCount, convertCallbacks);
 
         if (convertedType == null)
         {
+            if (scheduleUnknown)
+            {
+                CType cType = new(type, ptrCount);
+                pending.Add((cType, convertCallbacks));
+                return (cType, argName?.Trim());
+            }
+
             convertedType = "nint";
             ptrCount = 0;
-            if (!ctx.UnknownTypes.Contains(cType))
+            if (!ctx.UnknownTypes.Contains(type))
             {
-                ctx.UnknownTypes.Add(cType);
-                Logger.Warn($"Unknown type: {cType}");
+                ctx.UnknownTypes.Add(type);
+                Logger.Warn($"Unknown type: {type}");
             }
         }
 
         return (new CType(convertedType, ptrCount, nativeConvertedName), argName?.Trim());
+    }
+
+    public void BeginScheduleUnknown()
+    {
+        pending.Clear();
+        scheduleUnknown = true;
+    }
+
+    public void EndScheduleUnknown()
+    {
+        if (!scheduleUnknown)
+            return;
+        scheduleUnknown = false;
+
+        int initialCount = pending.Count;
+        int convertedCount = 0;
+        int unknownCount = 0;
+
+        for (int i = 0; i < pending.Count; i++)
+        {
+            (CType typeObj, bool convertCallbacks) = pending[i];
+            string type = typeObj.Name;
+            int ptrCount = typeObj.PointerCount;
+
+            (string convertedType, ptrCount, string nativeConvertedName) = ConvertType(type, ptrCount, convertCallbacks);
+            if (convertedType == null)
+            {
+                typeObj.Name = "nint";
+                typeObj.PointerCount = 0;
+                if (!ctx.UnknownTypes.Contains(type))
+                {
+                    ctx.UnknownTypes.Add(type);
+                    Logger.Warn($"[Pending] Unknown type: {type}");
+                }
+                unknownCount++;
+                continue;
+            }
+
+            typeObj.Name = convertedType;
+            typeObj.PointerCount = ptrCount;
+            typeObj.NativeConvertedName = nativeConvertedName;
+            convertedCount++;
+        }
+
+        pending.Clear();
+        Logger.Info($"Converted {convertedCount}/{initialCount} pending types ({unknownCount} unknown)");
     }
 }

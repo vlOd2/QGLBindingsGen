@@ -2,9 +2,9 @@
 
 internal class CType
 {
-    public readonly string Name;
-    public readonly int PointerCount;
-    public readonly string NativeConvertedName;
+    public string Name;
+    public int PointerCount;
+    public string NativeConvertedName;
 
     public CType(string name, int pointerCount = 0, string nativeConvertedName = null)
     {

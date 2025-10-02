@@ -113,10 +113,14 @@ internal static partial class CParser
     {
         List<string> lines = await TaskRunner.Run("Preparing file", PrepareFile(rawLines, ctx));
         customParser?.Invoke(lines);
+
+        ctx.TypeConv.BeginScheduleUnknown();
         await TaskRunner.Run("Parsing constants and opaque structs", ParseConstants(lines, ctx));
         string[] structNames = await TaskRunner.Run("Parsing structs (lazy)", ParseStructsLazy(lines, ctx));
         await TaskRunner.Run("Parsing callbacks", ParseCallbacks(lines, ctx));
         await TaskRunner.Run("Parsing structs", ParseStructs(lines, structNames, ctx));
+        ctx.TypeConv.EndScheduleUnknown();
+
         await TaskRunner.Run("Parsing functions", ParseFunctions(lines, ctx));
     }
 }
