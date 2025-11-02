@@ -1,5 +1,5 @@
 ﻿#define SHOW_TASK_TIMINGS
-//#define LIBUI_TESTING_MODE
+#define LIBUI_TESTING_MODE
 
 #if SHOW_TASK_TIMINGS
 using System.Diagnostics;
